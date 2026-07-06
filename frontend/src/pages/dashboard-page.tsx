@@ -19,8 +19,8 @@ import { EmptyState } from "@/components/common/empty-state";
 import { CategoryBadge } from "@/components/common/category-badge";
 import { StatusBadge } from "@/components/common/status-badge";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
-import { getMicrosites, deleteMicrosite } from "@/services/microsite-service";
-import { micrositeKeys } from "@/api/query-keys";
+import { getMyMicrosites, deleteMicrosite } from "@/services/microsite-service";
+import { queryKeys } from "@/api/query-keys";
 import { ROUTES } from "@/constants/routes";
 import { cn, formatRelativeTime } from "@/lib/utils";
 import type { MicrositeListItem } from "@/types";
@@ -191,14 +191,14 @@ export function DashboardPage() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: micrositeKeys.list(0, 20),
-    queryFn: () => getMicrosites(0, 20),
+    queryKey: [...queryKeys.microsites.all, 0, 20],
+    queryFn: () => getMyMicrosites(0, 20),
   });
 
   const deletemutation = useMutation({
     mutationFn: deleteMicrosite,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: micrositeKeys.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.microsites.all });
       toast.success("Microsite deleted");
     },
     onError: () => {

@@ -29,3 +29,12 @@ export const analyticsKeys = {
   all: ["analytics"] as const,
   microsite: (id: string) => [...analyticsKeys.all, id] as const,
 };
+
+/** Unified export for cleaner imports */
+export const queryKeys = {
+  users: userKeys,
+  microsites: micrositeKeys,
+  themes: themeKeys,
+  notifications: notificationKeys,
+  analytics: analyticsKeys,
+};

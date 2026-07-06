@@ -1,23 +1,35 @@
-import { get, post, put, del, patch } from "@/api/client";
+import { get, post, put, del } from "@/api/client";
 import type {
   Microsite,
   MicrositeListItem,
   PaginatedResponse,
   CreateMicrositeRequest,
   UpdateMicrositeRequest,
+  MicrositeStatus,
 } from "@/types";
 
-export async function getMicrosites(
+// ── CRUD Operations ──────────────────────────────────────────────────
+
+export async function getMyMicrosites(
   page = 0,
   size = 12,
+  status?: MicrositeStatus,
 ): Promise<PaginatedResponse<MicrositeListItem>> {
-  return get<PaginatedResponse<MicrositeListItem>>(
-    `/microsites?page=${page}&size=${size}`,
-  );
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
+  if (status) params.set("status", status);
+  return get<PaginatedResponse<MicrositeListItem>>(`/microsites/me?${params}`);
+}
+
+export async function getMicrositeCount(): Promise<{ total: number }> {
+  return get<{ total: number }>("/microsites/me/count");
 }
 
 export async function getMicrosite(id: string): Promise<Microsite> {
   return get<Microsite>(`/microsites/${id}`);
+}
+
+export async function getMicrositeBySlug(slug: string): Promise<Microsite> {
+  return get<Microsite>(`/microsites/public/${slug}`);
 }
 
 export async function createMicrosite(
@@ -37,6 +49,28 @@ export async function deleteMicrosite(id: string): Promise<void> {
   return del<void>(`/microsites/${id}`);
 }
 
+// ── Lifecycle Operations ─────────────────────────────────────────────
+
 export async function publishMicrosite(id: string): Promise<Microsite> {
-  return patch<Microsite>(`/microsites/${id}/publish`);
+  return post<Microsite, undefined>(`/microsites/${id}/publish`, undefined);
+}
+
+export async function unpublishMicrosite(id: string): Promise<Microsite> {
+  return post<Microsite, undefined>(`/microsites/${id}/unpublish`, undefined);
+}
+
+export async function archiveMicrosite(id: string): Promise<Microsite> {
+  return post<Microsite, undefined>(`/microsites/${id}/archive`, undefined);
+}
+
+// ── Password Verification (public) ──────────────────────────────────
+
+export async function verifyMicrositePassword(
+  slug: string,
+  password: string,
+): Promise<{ valid: boolean }> {
+  return post<{ valid: boolean }, { password: string }>(
+    `/microsites/public/${slug}/verify-password`,
+    { password },
+  );
 }

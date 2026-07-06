@@ -24,6 +24,8 @@ function ComingSoon({ title }: { title: string }) {
   );
 }
 
+import { CreateMicrositePage } from "@/pages/create-microsite-page";
+
 export const router = createBrowserRouter([
   {
     element: <RootLayout />,
@@ -55,7 +57,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "/dashboard/create",
-            element: <ComingSoon title="Create Microsite" />,
+            element: <CreateMicrositePage />,
           },
           {
             path: "/dashboard/microsites/:id",
