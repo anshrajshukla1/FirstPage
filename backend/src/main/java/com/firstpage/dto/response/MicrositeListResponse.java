@@ -1,0 +1,23 @@
+package com.firstpage.dto.response;
+
+import com.firstpage.entity.enums.Category;
+import com.firstpage.entity.enums.MicrositeStatus;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+/**
+ * Lightweight microsite response for dashboard list views.
+ * Excludes slides to reduce payload size.
+ */
+public record MicrositeListResponse(
+        UUID id,
+        String title,
+        String slug,
+        Category category,
+        MicrositeStatus status,
+        String previewImageUrl,
+        int slideCount,
+        int viewCount,
+        LocalDateTime createdAt
+) {}
