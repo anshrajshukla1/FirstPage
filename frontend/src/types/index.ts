@@ -241,3 +241,18 @@ export interface UpdateProfileRequest {
   displayName?: string;
   photoUrl?: string;
 }
+
+export interface CreateSlideRequest {
+  type: SlideType;
+  title?: string;
+  content?: string;
+  animationType?: AnimationType;
+  backgroundType?: string;
+}
+
+export interface UpdateSlideRequest {
+  title?: string;
+  content?: string;
+  animationType?: AnimationType;
+  backgroundType?: string;
+}

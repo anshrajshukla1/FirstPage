@@ -5,9 +5,12 @@ import { DashboardLayout } from "@/layouts/dashboard-layout";
 import { HomePage } from "@/pages/home-page";
 import { LoginPage } from "@/pages/login-page";
 import { DashboardPage } from "@/pages/dashboard-page";
+import { CreateMicrositePage } from "@/pages/create-microsite-page";
+import { EditorPage } from "@/pages/editor-page";
+import { PublicViewerPage } from "@/pages/public-viewer-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 
-// Lazy-loaded pages for future phases
+// Placeholder for upcoming pages
 function ComingSoon({ title }: { title: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -23,8 +26,6 @@ function ComingSoon({ title }: { title: string }) {
     </div>
   );
 }
-
-import { CreateMicrositePage } from "@/pages/create-microsite-page";
 
 export const router = createBrowserRouter([
   {
@@ -61,7 +62,11 @@ export const router = createBrowserRouter([
           },
           {
             path: "/dashboard/microsites/:id",
-            element: <ComingSoon title="Edit Microsite" />,
+            element: <EditorPage />,
+          },
+          {
+            path: "/dashboard/edit/:id",
+            element: <EditorPage />,
           },
           {
             path: "/dashboard/analytics",
@@ -78,10 +83,10 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Public viewer
+      // Public microsite viewer (no auth required)
       {
-        path: "/:slug",
-        element: <ComingSoon title="Public Viewer" />,
+        path: "/p/:slug",
+        element: <PublicViewerPage />,
       },
 
       // 404
