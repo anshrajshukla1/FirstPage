@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,6 +23,8 @@ public interface MicrositeRepository extends JpaRepository<Microsite, UUID> {
     boolean existsBySlug(String slug);
 
     long countByUserId(UUID userId);
+
+    List<Microsite> findByUserId(UUID userId);
 
     long countByUserIdAndStatus(UUID userId, MicrositeStatus status);
 }

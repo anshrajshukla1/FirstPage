@@ -20,6 +20,7 @@ import { CategoryBadge } from "@/components/common/category-badge";
 import { StatusBadge } from "@/components/common/status-badge";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
 import { getMyMicrosites, deleteMicrosite } from "@/services/microsite-service";
+import { getDashboardAnalytics } from "@/services/analytics-service";
 import { queryKeys } from "@/api/query-keys";
 import { ROUTES } from "@/constants/routes";
 import { cn, formatRelativeTime } from "@/lib/utils";
@@ -207,7 +208,11 @@ export function DashboardPage() {
   });
 
   const microsites = data?.content ?? [];
-  const totalViews = microsites.reduce((sum, m) => sum + m.viewCount, 0);
+
+  const { data: analytics } = useQuery({
+    queryKey: ["analytics", "dashboard"],
+    queryFn: getDashboardAnalytics,
+  });
 
   const handleDelete = (id: string) => {
     if (window.confirm("Are you sure you want to delete this microsite?")) {
@@ -244,20 +249,19 @@ export function DashboardPage() {
           <StatCard
             icon={<Layers className="h-5 w-5 text-primary" />}
             label="Total Microsites"
-            value={data?.totalElements ?? 0}
+            value={analytics?.totalMicrosites ?? data?.totalElements ?? 0}
             color="bg-primary/10"
           />
           <StatCard
             icon={<Eye className="h-5 w-5 text-sky-500" />}
             label="Total Views"
-            value={totalViews}
-            trend="+12%"
+            value={analytics?.totalViews ?? 0}
             color="bg-sky-500/10"
           />
           <StatCard
             icon={<Heart className="h-5 w-5 text-rose-500" />}
             label="Total Reactions"
-            value={0}
+            value={analytics?.totalReactions ?? 0}
             color="bg-rose-500/10"
           />
         </div>

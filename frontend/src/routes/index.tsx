@@ -8,6 +8,7 @@ import { DashboardPage } from "@/pages/dashboard-page";
 import { CreateMicrositePage } from "@/pages/create-microsite-page";
 import { EditorPage } from "@/pages/editor-page";
 import { PublicViewerPage } from "@/pages/public-viewer-page";
+import { AnalyticsPage } from "@/pages/analytics-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 
 // Placeholder for upcoming pages
@@ -70,11 +71,11 @@ export const router = createBrowserRouter([
           },
           {
             path: "/dashboard/analytics",
-            element: <ComingSoon title="Analytics" />,
+            element: <AnalyticsPage />,
           },
           {
             path: "/dashboard/analytics/:id",
-            element: <ComingSoon title="Microsite Analytics" />,
+            element: <AnalyticsPage />,
           },
           {
             path: "/dashboard/settings",
