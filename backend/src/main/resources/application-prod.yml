@@ -1,0 +1,37 @@
+# ── Production Profile ──────────────────────────────────────────────────
+# Activated via SPRING_PROFILES_ACTIVE=prod
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  flyway:
+    enabled: true
+
+# Disable Swagger in production
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+# Restrict Actuator exposure
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+# Production logging
+logging:
+  level:
+    root: WARN
+    com.firstpage: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: ERROR
+    org.flywaydb: INFO

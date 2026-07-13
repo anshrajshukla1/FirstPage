@@ -13,7 +13,7 @@ import {
   PartyPopper,
   Baby,
   Gift,
-  MessageHeart,
+  MessageCircleHeart,
   ArrowLeft,
   ArrowRight,
   Wand2,
@@ -46,7 +46,7 @@ const categories: {
   { value: "THANK_YOU" as Category, label: "Thank You", description: "Show gratitude", icon: Sparkles, gradient: "from-emerald-500 to-teal-500", glow: "shadow-emerald-500/20" },
   { value: "CONGRATULATIONS" as Category, label: "Congrats", description: "Celebrate their win", icon: PartyPopper, gradient: "from-yellow-500 to-lime-500", glow: "shadow-yellow-500/20" },
   { value: "BABY_WELCOME" as Category, label: "Baby Welcome", description: "New arrival joy", icon: Baby, gradient: "from-blue-400 to-sky-400", glow: "shadow-blue-400/20" },
-  { value: "FAREWELL" as Category, label: "Farewell", description: "A heartfelt goodbye", icon: MessageHeart, gradient: "from-purple-500 to-violet-500", glow: "shadow-purple-500/20" },
+  { value: "FAREWELL" as Category, label: "Farewell", description: "A heartfelt goodbye", icon: MessageCircleHeart, gradient: "from-purple-500 to-violet-500", glow: "shadow-purple-500/20" },
   { value: "PROPOSAL" as Category, label: "Proposal", description: "Pop the question", icon: Gift, gradient: "from-red-500 to-rose-500", glow: "shadow-red-500/20" },
   { value: "CUSTOM" as Category, label: "Custom", description: "Your unique occasion", icon: Wand2, gradient: "from-gray-500 to-slate-500", glow: "shadow-gray-500/20" },
 ];

@@ -24,6 +24,8 @@ Thumbs.db
 backend/target/
 backend/*.jar
 backend/*.war
+backend/.mvn/wrapper/maven/
+backend/mvnw-dist.zip
 
 # Frontend
 frontend/node_modules/

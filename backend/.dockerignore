@@ -1,0 +1,8 @@
+target/
+.env
+.env.*
+service-account.json
+serviceAccountKey.json
+*.iml
+.idea/
+.mvn/wrapper/maven/
