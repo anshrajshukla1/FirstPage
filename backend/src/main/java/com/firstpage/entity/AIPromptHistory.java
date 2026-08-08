@@ -3,6 +3,7 @@ package com.firstpage.entity;
 import com.firstpage.entity.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.UUID;
 
@@ -19,7 +20,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class AIPromptHistory extends BaseEntity {
 
     @Column(name = "user_id", nullable = false)

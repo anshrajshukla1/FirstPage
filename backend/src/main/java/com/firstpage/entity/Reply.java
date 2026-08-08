@@ -3,6 +3,8 @@ package com.firstpage.entity;
 import com.firstpage.entity.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 /**
  * Represents a reply from a visitor to the microsite creator.
@@ -17,7 +19,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Reply extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

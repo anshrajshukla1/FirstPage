@@ -5,6 +5,8 @@ import com.firstpage.entity.enums.AnimationType;
 import com.firstpage.entity.enums.SlideType;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +24,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Slide extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

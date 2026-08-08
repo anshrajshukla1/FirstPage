@@ -5,6 +5,8 @@ import com.firstpage.entity.enums.Category;
 import com.firstpage.entity.enums.MicrositeStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -25,7 +27,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Microsite extends BaseEntity {
 
     @Column(nullable = false)

@@ -3,6 +3,8 @@ package com.firstpage.entity;
 import com.firstpage.entity.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 /**
  * Represents a visual theme that can be applied to a microsite.
@@ -19,7 +21,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Theme extends BaseEntity {
 
     @Column(nullable = false)

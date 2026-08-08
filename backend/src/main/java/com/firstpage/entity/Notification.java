@@ -4,6 +4,8 @@ import com.firstpage.entity.base.BaseEntity;
 import com.firstpage.entity.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 import java.util.UUID;
 
@@ -21,7 +23,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Notification extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

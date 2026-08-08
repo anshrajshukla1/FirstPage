@@ -4,6 +4,8 @@ import com.firstpage.entity.base.BaseEntity;
 import com.firstpage.entity.enums.MediaType;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 /**
  * Represents an uploaded media file (image, video, audio, voice note)
@@ -19,7 +21,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Media extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

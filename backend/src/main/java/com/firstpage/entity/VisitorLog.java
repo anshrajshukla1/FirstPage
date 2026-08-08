@@ -3,6 +3,8 @@ package com.firstpage.entity;
 import com.firstpage.entity.base.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 
@@ -20,7 +22,7 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class VisitorLog extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -4,6 +4,7 @@ import com.firstpage.entity.base.BaseEntity;
 import com.firstpage.entity.enums.ReactionType;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 /**
  * Represents a visitor reaction to a microsite (heart, cry, laugh, etc.).
@@ -17,7 +18,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
 public class Reaction extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
