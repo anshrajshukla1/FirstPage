@@ -1,239 +1,166 @@
-# 💌 FirstPage
+# FirstPage — AI-Powered Personalized Microsite Generator
 
-> An AI-powered personalized microsite generator for proposals, friendship requests, apologies, birthdays, celebrations, and other heartfelt moments.
+**FirstPage** is a full-stack web application designed to help users create, customize, and share highly personalized, interactive microsites for special occasions (birthdays, anniversaries, apologies, proposals, etc.). 
 
-![Java](https://img.shields.io/badge/Java-17-orange) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4-green) ![React](https://img.shields.io/badge/React-19-blue) ![TypeScript](https://img.shields.io/badge/TypeScript-6-blue) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
-
----
-
-## ✨ Features
-
-- **🎨 13 Categories** — Crush, Friendship, Apology, Birthday, Anniversary, Farewell, Proposal, Thank You, Congratulations, Family, Graduation, Baby Welcome, Custom
-- **🤖 AI Content Generation** — Category-aware creative writing powered by Gemini/OpenAI
-- **📱 Slide-based Microsites** — Drag-and-drop editor with multiple slide types
-- **🎭 Premium Themes** — Beautiful, pre-designed themes for every occasion
-- **📸 Media Uploads** — Images and videos via Cloudinary
-- **🔗 Shareable Links** — Custom slugs with password protection & one-time view
-- **💝 Reactions & Replies** — Recipients can react and reply privately
-- **📊 Analytics Dashboard** — Views, unique visitors, reactions, time spent
-- **🔔 Notifications** — Real-time alerts when someone views or reacts
+This document serves as a complete blueprint of the architecture, features, database schema, and API endpoints. **Any AI agent should be able to read this document and perfectly reconstruct or extend the system.**
 
 ---
 
-## 🏗️ Tech Stack
+## 🌟 Core Features
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS v4, Redux Toolkit, TanStack Query, Framer Motion |
-| **Backend** | Spring Boot 3.4, Java 17, Spring Security, Spring Data JPA, MapStruct, Lombok |
-| **Database** | PostgreSQL 16 + Flyway migrations |
-| **Auth** | Firebase Authentication (Google Sign-In) |
-| **Storage** | Cloudinary (images, videos) |
-| **AI** | Pluggable provider (Gemini / OpenAI via REST) |
+- **Authentication**: Firebase Google Sign-In with Spring Security JWT validation.
+- **Microsite Builder**: Multi-slide editor with drag-and-drop reordering.
+- **AI Assistant**: Integrated Gemini AI to generate heartfelt messages based on category, tone, and recipient.
+- **Rich Slide Types**: Intro, Story, Photos, Video, Quote, Timeline, Countdown, Surprise, Proposal, Custom.
+- **Media Upload**: Direct Cloudinary integration for images and videos with size validation.
+- **Public Viewer**: Beautiful, animated, mobile-responsive viewer with swipe/keyboard navigation.
+- **Interactions**: Visitors can leave emoji reactions (Heart, Laugh, Cry, Fire, Star) and text replies.
+- **Security & Privacy**: Optional password protection, anonymous viewing, and one-time view enforcement.
+- **Analytics**: Track views, unique visitors, time spent per slide, and device/country metrics.
 
 ---
 
-## 🚀 Quick Start
+## 🛠️ Tech Stack
+
+### Frontend
+- **Framework**: React 19, Vite, TypeScript
+- **Styling**: Tailwind CSS v4, Framer Motion (animations), Lucide React (icons)
+- **State Management**: Redux Toolkit (Auth/UI state), TanStack Query v5 (Server state / Data fetching)
+- **Routing**: React Router v7
+- **Auth**: Firebase Authentication (Google Auth Provider)
+
+### Backend
+- **Framework**: Java 17, Spring Boot 3.4.1
+- **Database**: PostgreSQL with Spring Data JPA
+- **Migrations**: Flyway
+- **Mapping & Boilerplate**: MapStruct 1.6.3, Lombok 1.18.46 (with `@SuperBuilder` for JDK 24 compatibility)
+- **Security**: Spring Security (Stateless, Custom Firebase JWT Filter)
+- **Documentation**: SpringDoc OpenAPI 3 (Swagger UI)
+
+---
+
+## 🗄️ Database Schema & Entities
+
+The database is managed via Flyway migrations (`V1` to `V10`).
+
+1. **User**: `id`, `firebaseUid` (unique), `email`, `displayName`, `photoUrl`, `role`, `lastLoginAt`
+2. **Microsite**: `id`, `title`, `slug` (unique), `recipientName`, `category`, `status`, `themeId`, `passwordHash`, `isAnonymous`, `isOneTimeView`, `hasBeenViewed`, `musicUrl`, `scheduledAt`, `expiresAt`, `publishedAt`, `userId` (FK)
+3. **Slide**: `id`, `orderIndex`, `type` (Enum), `title`, `content`, `animationType`, `backgroundType`, `micrositeId` (FK)
+4. **Media**: `id`, `type`, `url`, `publicId`, `caption`, `orderIndex`, `fileSize`, `micrositeId` (FK), `slideId` (FK)
+5. **Theme**: `id`, `name`, `slug`, `category`, `cssVariables`, `previewImageUrl`, `isPremium`, `isActive`
+6. **Reaction**: `id`, `type`, `visitorSessionId`, `micrositeId` (FK)
+7. **Reply**: `id`, `message`, `visitorSessionId`, `isRead`, `micrositeId` (FK)
+8. **VisitorLog**: `id`, `sessionId`, `ipAddress`, `country`, `device`, `browser`, `currentSlideIndex`, `timeSpentSeconds`, `replayCount`, `visitedAt`, `micrositeId` (FK)
+9. **Notification**: `id`, `type`, `message`, `isRead`, `userId` (FK), `micrositeId` (FK)
+10. **AIPromptHistory**: `id`, `provider`, `promptType`, `inputPrompt`, `generatedOutput`, `userId` (FK)
+
+*(All entities inherit from `BaseEntity` which provides `id`, `createdAt`, and `updatedAt`)*
+
+---
+
+## 🔌 API Endpoints
+
+All endpoints are prefixed with `/api/v1`. All endpoints require a Firebase Bearer token except for those under `/public/`, `/actuator/`, and `/swagger-ui/`.
+
+### 1. Auth & Users (`UserController`)
+- `GET /users/me` — Get current authenticated user profile.
+- `PUT /users/me` — Update user profile.
+- `POST /users/sync` — Sync Firebase user data to the database after sign-in.
+
+### 2. Microsites (`MicrositeController`)
+- `GET /microsites` — List user's microsites (paginated).
+- `POST /microsites` — Create a new microsite.
+- `GET /microsites/{id}` — Get microsite details.
+- `PUT /microsites/{id}` — Update microsite settings.
+- `DELETE /microsites/{id}` — Delete microsite.
+- `POST /microsites/{id}/publish` — Publish microsite (generates slug).
+- `POST /microsites/{id}/duplicate` — Duplicate an existing microsite.
+
+### 3. Slides (`SlideController`)
+- `GET /microsites/{id}/slides` — Get all slides for a microsite.
+- `POST /microsites/{id}/slides` — Add a new slide.
+- `PUT /microsites/{id}/slides/{slideId}` — Update slide content/title.
+- `DELETE /microsites/{id}/slides/{slideId}` — Delete a slide.
+- `PUT /microsites/{id}/slides/reorder` — Reorder slides (expects array of IDs).
+
+### 4. Public Viewer (`PublicViewerController` - No Auth)
+- `GET /public/microsites/{slug}` — Get public payload for rendering.
+- `POST /public/microsites/{slug}/verify-password` — Unlock a password-protected microsite.
+- `POST /public/microsites/{id}/reactions` — Add an emoji reaction.
+- `POST /public/microsites/{id}/replies` — Add a text reply.
+- `POST /public/microsites/{id}/track` — Track visitor analytics (time spent, device).
+
+### 5. Analytics & Notifications (`AnalyticsController`, `NotificationController`)
+- `GET /analytics/dashboard` — Get global stats for the user (total views, reactions, etc.).
+- `GET /analytics/microsites/{id}` — Get specific microsite stats.
+- `GET /analytics/microsites/{id}/reactions` — Get grouped reaction counts.
+- `GET /notifications` — List user notifications (paginated).
+- `PUT /notifications/{id}/read` — Mark notification as read.
+- `PUT /notifications/read-all` — Mark all as read.
+
+### 6. Media & AI (`MediaController`, `AIController`)
+- `POST /media/upload/image` — Upload image to Cloudinary (MultipartFile).
+- `POST /media/upload/video` — Upload video to Cloudinary.
+- `DELETE /media/{publicId}` — Delete media from Cloudinary.
+- `POST /ai/generate` — Generate slide content using Gemini.
+
+---
+
+## 🚀 Running Locally
 
 ### Prerequisites
-
-- Java 17+
+- JDK 17+ (Tested on JDK 24)
 - Node.js 20+
-- PostgreSQL 16 (or use Docker)
-- Firebase project with Google Sign-In enabled
-- Cloudinary account
-- Gemini API key
+- PostgreSQL running locally on port 5432
+- Firebase Project (Authentication enabled)
+- Cloudinary Account (API keys)
+- Google Gemini API Key
 
-### 1. Clone
-
-```bash
-git clone https://github.com/anshrajshukla1/FirstPage.git
-cd FirstPage
+### Environment Variables
+**Frontend (`frontend/.env.local`)**:
+```env
+VITE_API_BASE_URL=http://localhost:8080/api/v1
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_PROJECT_ID=...
 ```
 
-### 2. Backend Setup
+**Backend (`backend/src/main/resources/application.yml` or Env Vars)**:
+```env
+DB_URL=jdbc:postgresql://localhost:5432/firstpage
+DB_USERNAME=postgres
+DB_PASSWORD=postgres
+FIREBASE_SERVICE_ACCOUNT_PATH=service-account.json
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+GEMINI_API_KEY=...
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+```
 
+### Start Commands
+**Backend**:
 ```bash
 cd backend
-
-# Copy env and fill in your values
-cp .env.example .env
-
-# Edit .env with your credentials:
-# DB_URL, DB_USERNAME, DB_PASSWORD
-# CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET
-# GEMINI_API_KEY
-# FIREBASE_SERVICE_ACCOUNT_PATH (path to your service-account.json)
-
-# Run with Maven wrapper
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
+*(Runs on http://localhost:8080. Swagger UI at http://localhost:8080/swagger-ui.html)*
 
-The backend starts at **http://localhost:8080**. Swagger UI is available at **http://localhost:8080/swagger-ui.html**.
-
-### 3. Frontend Setup
-
+**Frontend**:
 ```bash
 cd frontend
-
-# Install dependencies
-npm install
-
-# Copy env
-cp .env.example .env.local
-
-# Edit .env.local with your Firebase config
-
-# Start dev server
 npm run dev
 ```
-
-The frontend starts at **http://localhost:5173**.
-
----
-
-## 🐳 Docker Deployment
-
-### Using Docker Compose (recommended)
-
-```bash
-# Create a .env file at the root with all required variables
-cp backend/.env.example .env
-
-# Add to .env:
-# CORS_ALLOWED_ORIGINS=https://your-frontend-domain.com
-# FIREBASE_CREDENTIALS_JSON=<your Firebase service account JSON as a single line>
-# VITE_API_BASE_URL=https://your-backend-domain.com/api/v1
-
-# Build and start all services
-docker compose up --build -d
-```
-
-This starts:
-- **PostgreSQL** on port 5432
-- **Backend** on port 8080
-- **Frontend** on port 3000
-
-### Individual Docker builds
-
-```bash
-# Backend
-cd backend
-docker build -t firstpage-backend .
-docker run -p 8080:8080 --env-file .env firstpage-backend
-
-# Frontend
-cd frontend
-docker build --build-arg VITE_API_BASE_URL=https://api.yoursite.com/api/v1 -t firstpage-frontend .
-docker run -p 3000:80 firstpage-frontend
-```
+*(Runs on http://localhost:3001)*
 
 ---
 
-## ☁️ Cloud Deployment
+## 🏗️ Architecture Notes for AI Agents
 
-### Backend (Railway / Render / Fly.io)
-
-1. Connect your GitHub repo
-2. Set the **Root Directory** to `backend`
-3. Set **Build Command**: `./mvnw package -DskipTests`
-4. Set **Start Command**: `java -jar target/*.jar`
-5. Add environment variables:
-
-| Variable | Description |
-|----------|-------------|
-| `SPRING_PROFILES_ACTIVE` | `prod` |
-| `DB_URL` | `jdbc:postgresql://host:5432/dbname` |
-| `DB_USERNAME` | Database username |
-| `DB_PASSWORD` | Database password |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
-| `CLOUDINARY_API_KEY` | Cloudinary API key |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| `GEMINI_API_KEY` | Google Gemini API key |
-| `AI_DEFAULT_PROVIDER` | `gemini` |
-| `FIREBASE_CREDENTIALS_JSON` | Firebase service account JSON (single line) |
-| `CORS_ALLOWED_ORIGINS` | Frontend URL (e.g. `https://firstpage.vercel.app`) |
-
-### Frontend (Vercel / Netlify)
-
-1. Connect your GitHub repo
-2. Set the **Root Directory** to `frontend`
-3. Set **Build Command**: `npm run build`
-4. Set **Output Directory**: `dist`
-5. Add environment variables:
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_BASE_URL` | Backend URL (e.g. `https://firstpage-api.railway.app/api/v1`) |
-| `VITE_FIREBASE_API_KEY` | Firebase web API key |
-| `VITE_FIREBASE_AUTH_DOMAIN` | `yourproject.firebaseapp.com` |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase project ID |
-
-> **Note**: On Vercel, add a `vercel.json` with SPA rewrite:
-> ```json
-> { "rewrites": [{ "source": "/(.*)", "destination": "/" }] }
-> ```
+1. **Authentication Flow**: The frontend uses Firebase SDK to authenticate and retrieve a JWT. It intercepts all Axios requests to inject `Authorization: Bearer <token>`. The backend `FirebaseAuthenticationFilter` intercepts requests, validates the token using `FirebaseAuth.getInstance().verifyIdToken()`, and populates the Spring `SecurityContext`.
+2. **Syncing**: Because Firebase manages the users, the frontend calls `/api/v1/users/sync` immediately after login to ensure the `users` table in PostgreSQL is populated and up to date.
+3. **CORS**: Configured in both `SecurityConfig.java` and `WebConfig.java` in the backend. If adding new frontend ports, update `CORS_ALLOWED_ORIGINS`.
+4. **MapStruct & Lombok**: The project uses MapStruct for entity-DTO mapping. Entities extend `BaseEntity` and use `@SuperBuilder` to allow MapStruct to access inherited fields during generation.
 
 ---
-
-## 📁 Project Structure
-
-```
-FirstPage/
-├── backend/
-│   ├── src/main/java/com/firstpage/
-│   │   ├── ai/              # AI orchestrator + strategy pattern
-│   │   ├── config/           # App, Cloudinary, Firebase, OpenAPI, Web config
-│   │   ├── controller/       # 9 REST controllers
-│   │   ├── dto/              # Request/Response DTOs
-│   │   ├── entity/           # 9 JPA entities + enums
-│   │   ├── exception/        # Global exception handler (RFC 7807)
-│   │   ├── mapper/           # MapStruct mappers
-│   │   ├── media/            # Cloudinary media service
-│   │   ├── repository/       # Spring Data JPA repositories
-│   │   ├── security/         # Firebase JWT auth filter
-│   │   ├── service/          # 8 business services
-│   │   └── utils/            # Slug & date utilities
-│   ├── src/main/resources/
-│   │   ├── db/migration/     # 10 Flyway SQL migrations
-│   │   ├── application.yml
-│   │   └── application-prod.yml
-│   ├── Dockerfile
-│   └── pom.xml
-├── frontend/
-│   ├── src/
-│   │   ├── api/              # Axios client + query keys
-│   │   ├── components/       # Reusable UI components
-│   │   ├── hooks/            # Custom React hooks
-│   │   ├── layouts/          # Root, Auth, Dashboard layouts
-│   │   ├── pages/            # 8 page components
-│   │   ├── routes/           # React Router config
-│   │   ├── services/         # 6 API service modules
-│   │   ├── store/            # Redux Toolkit store
-│   │   └── types/            # TypeScript interfaces
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   └── package.json
-├── docker-compose.yml
-└── README.md
-```
-
----
-
-## 📄 API Documentation
-
-When running locally, visit **http://localhost:8080/swagger-ui.html** for the full interactive API documentation.
-
-Key API groups:
-- `POST /api/v1/users/sync` — Sync Firebase user to DB
-- `GET/POST /api/v1/microsites` — Microsite CRUD
-- `POST /api/v1/ai/generate` — AI content generation
-- `POST /api/v1/microsites/{id}/media` — Media upload
-- `GET /api/v1/public/microsites/{slug}` — Public viewer
-- `GET /api/v1/analytics/dashboard` — Analytics
-
----
-
-## 📝 License
-
-This project is private and proprietary.
+*Generated by Antigravity AI*
