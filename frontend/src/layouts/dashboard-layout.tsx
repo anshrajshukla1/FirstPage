@@ -1,10 +1,15 @@
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import {
+  Outlet,
+  NavLink,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
   LayoutDashboard,
   Plus,
   Settings,
-  Bell,
   Search,
   Menu,
   X,
@@ -14,6 +19,7 @@ import {
 } from "lucide-react";
 import { Logo } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/theme-toggle";
+import { NotificationBell } from "@/components/common/notification-bell";
 import { ProtectedRoute } from "@/components/common/protected-route";
 import { useAppSelector, useAppDispatch } from "@/store/store";
 import { toggleSidebar, setSidebarOpen } from "@/store/slices/ui-slice";
@@ -161,8 +167,27 @@ function Sidebar() {
 
 function TopBar() {
   const dispatch = useAppDispatch();
-  const unreadCount = useAppSelector((state) => state.ui.unreadCount);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  // The query lives in the URL so the dashboard can read it and the result
+  // stays shareable/back-button-able. There is no server-side search
+  // endpoint, so the dashboard filters the page it already has.
+  const query = searchParams.get("q") ?? "";
+
+  const onSearch = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) params.set("q", value);
+    else params.delete("q");
+
+    const search = params.toString();
+    const target = `${ROUTES.DASHBOARD}${search ? `?${search}` : ""}`;
+    // Searching from a sub-page (editor, analytics) jumps back to the list,
+    // which is the only place results are rendered.
+    navigate(target, { replace: location.pathname === ROUTES.DASHBOARD });
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/80 px-4 backdrop-blur-md md:px-6">
@@ -180,24 +205,18 @@ function TopBar() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
           <input
-            type="text"
+            type="search"
+            value={query}
+            onChange={(e) => onSearch(e.target.value)}
             placeholder="Search microsites..."
+            aria-label="Search microsites"
             className="h-9 w-full rounded-xl border border-border bg-surface pl-9 pr-4 text-sm text-text-primary placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
       </div>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Notifications */}
-        <button className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-border text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary">
-          <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-bold text-white">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
-          )}
-        </button>
-
+        <NotificationBell />
         <ThemeToggle />
       </div>
     </header>
@@ -249,6 +268,7 @@ function MobileBottomNav() {
 
 export function DashboardLayout() {
   const isMobile = useIsMobile();
+  const location = useLocation();
 
   return (
     <ProtectedRoute>
@@ -259,7 +279,7 @@ export function DashboardLayout() {
           <main className="flex-1 px-4 py-6 pb-20 md:px-6 md:pb-6 lg:px-8">
             <AnimatePresence mode="wait">
               <motion.div
-                key={useLocation().pathname}
+                key={location.pathname}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}

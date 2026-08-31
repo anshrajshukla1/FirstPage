@@ -18,7 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -43,6 +45,11 @@ public class SlideService {
 
         Slide slide = slideMapper.toEntity(request);
         slide.setMicrosite(microsite);
+        // `config` is NOT NULL in the schema; MapStruct leaves it null when the
+        // request omits it, which would fail the insert.
+        if (slide.getConfig() == null) {
+            slide.setConfig(new LinkedHashMap<>());
+        }
         // Set order index to end of list
         long count = slideRepository.countByMicrositeId(micrositeId);
         slide.setOrderIndex((int) count);
@@ -84,6 +91,22 @@ public class SlideService {
         if (request.content() != null) slide.setContent(request.content());
         if (request.animationType() != null) slide.setAnimationType(request.animationType());
         if (request.backgroundType() != null) slide.setBackgroundType(request.backgroundType());
+
+        // Merged key-by-key so a partial update (e.g. only `targetAt`) does not
+        // wipe the rest of the slide's settings. A null value clears its key.
+        if (request.config() != null) {
+            Map<String, Object> merged = slide.getConfig() == null
+                    ? new LinkedHashMap<>()
+                    : new LinkedHashMap<>(slide.getConfig());
+            request.config().forEach((key, value) -> {
+                if (value == null) {
+                    merged.remove(key);
+                } else {
+                    merged.put(key, value);
+                }
+            });
+            slide.setConfig(merged);
+        }
 
         Slide saved = slideRepository.save(slide);
         log.info("Slide updated: id={}", slideId);

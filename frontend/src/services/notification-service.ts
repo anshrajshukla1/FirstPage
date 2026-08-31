@@ -1,25 +1,12 @@
 import { get, post } from "@/api/client";
+import type { Notification, PaginatedResponse } from "@/types";
 
-export interface NotificationItem {
-  id: string;
-  type: string;
-  message: string;
-  micrositeId: string | null;
-  isRead: boolean;
-  createdAt: string;
-}
-
-export interface PaginatedNotifications {
-  content: NotificationItem[];
-  totalElements: number;
-  totalPages: number;
-}
-
+/** Newest first — the backend sorts by `createdAt` DESC by default. */
 export async function getNotifications(
   page = 0,
   size = 20,
-): Promise<PaginatedNotifications> {
-  return get<PaginatedNotifications>(
+): Promise<PaginatedResponse<Notification>> {
+  return get<PaginatedResponse<Notification>>(
     `/notifications?page=${page}&size=${size}`,
   );
 }

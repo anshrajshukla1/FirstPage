@@ -70,6 +70,16 @@ public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
             } catch (FirebaseAuthException e) {
                 log.warn("Firebase token verification failed: {}", e.getMessage());
                 SecurityContextHolder.clearContext();
+            } catch (IllegalStateException e) {
+                // FirebaseApp was never initialised (missing/invalid service
+                // account). Without this catch every authenticated request 500s
+                // instead of returning a 401 from the entry point.
+                log.error("Firebase Admin SDK is not initialised — "
+                        + "check FIREBASE_SERVICE_ACCOUNT_PATH. Rejecting request as unauthenticated.");
+                SecurityContextHolder.clearContext();
+            } catch (RuntimeException e) {
+                log.warn("Unexpected error while verifying Firebase token: {}", e.getMessage());
+                SecurityContextHolder.clearContext();
             }
         }
 

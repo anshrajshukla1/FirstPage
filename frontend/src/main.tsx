@@ -3,7 +3,10 @@ import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { store } from "@/store/store";
+import { setTokenGetter } from "@/api/client";
 import App from "./App";
+
+setTokenGetter(() => store.getState().auth.token);
 
 const queryClient = new QueryClient({
   defaultOptions: {

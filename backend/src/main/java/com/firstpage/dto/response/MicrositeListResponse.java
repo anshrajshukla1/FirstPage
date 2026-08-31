@@ -19,5 +19,7 @@ public record MicrositeListResponse(
         String previewImageUrl,
         int slideCount,
         int viewCount,
+        /** When the recipient last opened it — null until somebody does. */
+        LocalDateTime lastViewedAt,
         LocalDateTime createdAt
 ) {}

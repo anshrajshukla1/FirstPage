@@ -28,10 +28,6 @@ export async function getMicrosite(id: string): Promise<Microsite> {
   return get<Microsite>(`/microsites/${id}`);
 }
 
-export async function getMicrositeBySlug(slug: string): Promise<Microsite> {
-  return get<Microsite>(`/microsites/public/${slug}`);
-}
-
 export async function createMicrosite(
   data: CreateMicrositeRequest,
 ): Promise<Microsite> {
@@ -63,14 +59,6 @@ export async function archiveMicrosite(id: string): Promise<Microsite> {
   return post<Microsite, undefined>(`/microsites/${id}/archive`, undefined);
 }
 
-// ── Password Verification (public) ──────────────────────────────────
-
-export async function verifyMicrositePassword(
-  slug: string,
-  password: string,
-): Promise<{ valid: boolean }> {
-  return post<{ valid: boolean }, { password: string }>(
-    `/microsites/public/${slug}/verify-password`,
-    { password },
-  );
-}
+// Visitor-facing calls (fetch by slug, password unlock, reactions, replies)
+// live in `@/services/public-viewer-service` — they hit `/public/**`, which the
+// backend serves without authentication.

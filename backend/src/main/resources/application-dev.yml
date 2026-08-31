@@ -1,7 +1,9 @@
 spring:
   jpa:
     hibernate:
-      ddl-auto: update
+      # Flyway owns the schema — `update` would let Hibernate silently patch it
+      # and mask broken migrations. `validate` fails fast on divergence instead.
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:

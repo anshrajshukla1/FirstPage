@@ -1,4 +1,4 @@
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion } from "motion/react";
 import { useQuery } from "@tanstack/react-query";
@@ -9,7 +9,6 @@ import {
   MessageCircle,
   Clock,
   Repeat,
-  ArrowLeft,
   TrendingUp,
   BarChart3,
 } from "lucide-react";
@@ -58,13 +57,21 @@ function StatCard({
 
 // ── Reaction Bar ───────────────────────────────────────────────────────
 
+// One entry per `com.firstpage.entity.enums.ReactionType`.
 const reactionEmojis: Record<string, string> = {
   HEART: "❤️",
-  LAUGH: "😂",
   CRY: "😢",
-  FIRE: "🔥",
-  STAR: "⭐",
-  CLAP: "👏",
+  LAUGH: "😂",
+  SHOCK: "😲",
+  TOUCHED: "🥹",
+};
+
+const reactionLabels: Record<string, string> = {
+  HEART: "Love",
+  CRY: "Tears",
+  LAUGH: "Haha",
+  SHOCK: "Wow",
+  TOUCHED: "Touched",
 };
 
 function ReactionBar({ reactions }: { reactions: { type: string; count: number }[] }) {
@@ -79,7 +86,9 @@ function ReactionBar({ reactions }: { reactions: { type: string; count: number }
     <div className="space-y-2">
       {reactions.map((r) => (
         <div key={r.type} className="flex items-center gap-3">
-          <span className="text-lg">{reactionEmojis[r.type] ?? "💜"}</span>
+          <span className="text-lg" title={reactionLabels[r.type] ?? r.type}>
+            {reactionEmojis[r.type] ?? "💜"}
+          </span>
           <div className="flex-1">
             <div className="h-2 overflow-hidden rounded-full bg-border">
               <motion.div

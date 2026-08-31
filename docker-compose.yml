@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ── PostgreSQL ────────────────────────────────────────────────────────
   postgres:
@@ -50,11 +48,19 @@ services:
   frontend:
     build:
       context: ./frontend
+      # Baked into the bundle at build time — Vite has no runtime env.
       args:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8080/api/v1}
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
     container_name: firstpage-frontend
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3000:80"
 

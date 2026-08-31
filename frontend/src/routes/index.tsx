@@ -66,10 +66,6 @@ export const router = createBrowserRouter([
             element: <EditorPage />,
           },
           {
-            path: "/dashboard/edit/:id",
-            element: <EditorPage />,
-          },
-          {
             path: "/dashboard/analytics",
             element: <AnalyticsPage />,
           },

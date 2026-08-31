@@ -35,16 +35,18 @@ public class AnalyticsService {
         analytics.put("title", microsite.getTitle());
         analytics.put("status", microsite.getStatus().name());
 
-        // View stats
-        long totalViews = visitorLogRepository.countByMicrositeId(micrositeId);
+        // View stats. VisitorLog holds one row per (microsite, session): repeat
+        // visits bump `replayCount` rather than inserting a row, so the row count
+        // is the unique-visitor figure and total views must add the replays back.
         long uniqueVisitors = visitorLogRepository.countDistinctSessionsByMicrositeId(micrositeId);
         Double avgTimeSpent = visitorLogRepository.avgTimeSpentByMicrositeId(micrositeId);
         Long totalReplays = visitorLogRepository.totalReplaysByMicrositeId(micrositeId);
+        long replays = totalReplays != null ? totalReplays : 0L;
 
-        analytics.put("totalViews", totalViews);
+        analytics.put("totalViews", uniqueVisitors + replays);
         analytics.put("uniqueVisitors", uniqueVisitors);
         analytics.put("avgTimeSpentSeconds", avgTimeSpent != null ? avgTimeSpent : 0.0);
-        analytics.put("totalReplays", totalReplays != null ? totalReplays : 0L);
+        analytics.put("totalReplays", replays);
 
         // Reaction stats
         long totalReactions = reactionRepository.countByMicrositeId(micrositeId);
@@ -82,7 +84,9 @@ public class AnalyticsService {
         long totalReplies = 0;
 
         for (Microsite m : microsites) {
-            totalViews += visitorLogRepository.countByMicrositeId(m.getId());
+            totalViews += visitorLogRepository.countDistinctSessionsByMicrositeId(m.getId());
+            Long replays = visitorLogRepository.totalReplaysByMicrositeId(m.getId());
+            totalViews += replays != null ? replays : 0L;
             totalReactions += reactionRepository.countByMicrositeId(m.getId());
             totalReplies += replyRepository.countByMicrositeId(m.getId());
         }

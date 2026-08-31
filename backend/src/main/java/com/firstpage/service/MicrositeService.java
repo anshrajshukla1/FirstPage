@@ -4,6 +4,7 @@ import com.firstpage.dto.request.CreateMicrositeRequest;
 import com.firstpage.dto.request.UpdateMicrositeRequest;
 import com.firstpage.dto.response.MicrositeListResponse;
 import com.firstpage.dto.response.MicrositeResponse;
+import com.firstpage.dto.response.VisitorSummary;
 import com.firstpage.entity.Microsite;
 import com.firstpage.entity.User;
 import com.firstpage.entity.enums.MicrositeStatus;
@@ -19,12 +20,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * Core business logic for microsite CRUD operations.
@@ -40,8 +44,7 @@ public class MicrositeService {
     private final UserRepository userRepository;
     private final VisitorLogRepository visitorLogRepository;
     private final MicrositeMapper micrositeMapper;
-
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     // ── Create ──────────────────────────────────────────────────────────
 
@@ -79,6 +82,9 @@ public class MicrositeService {
     public MicrositeResponse getBySlug(String slug) {
         Microsite microsite = micrositeRepository.findBySlug(slug)
                 .orElseThrow(() -> new ResourceNotFoundException("Microsite", slug));
+        if (microsite.getStatus() != MicrositeStatus.PUBLISHED) {
+            throw new BusinessException("This microsite is not currently published.", "NOT_PUBLISHED");
+        }
         return enrichResponse(micrositeMapper.toResponse(microsite), microsite.getId());
     }
 
@@ -94,13 +100,28 @@ public class MicrositeService {
             page = micrositeRepository.findByUserId(user.getId(), pageable);
         }
 
+        /*
+         * One grouped query for the whole page rather than a count per card.
+         * Microsites nobody has opened are absent from the map, which is exactly
+         * the "not opened yet" state the card renders.
+         */
+        Map<UUID, VisitorSummary> visits = page.getContent().isEmpty()
+                ? Map.of()
+                : visitorLogRepository
+                        .summarizeByMicrositeIds(page.getContent().stream()
+                                .map(Microsite::getId).toList())
+                        .stream()
+                        .collect(Collectors.toMap(VisitorSummary::micrositeId, s -> s));
+
         return page.map(m -> {
             MicrositeListResponse lr = micrositeMapper.toListResponse(m);
-            long views = visitorLogRepository.countDistinctSessionsByMicrositeId(m.getId());
-            // Re-create with enriched viewCount
+            VisitorSummary summary = visits.get(m.getId());
             return new MicrositeListResponse(
                     lr.id(), lr.title(), lr.slug(), lr.category(), lr.status(),
-                    lr.previewImageUrl(), lr.slideCount(), (int) views, lr.createdAt()
+                    lr.previewImageUrl(), lr.slideCount(),
+                    summary == null ? 0 : (int) summary.distinctVisitors(),
+                    summary == null ? null : summary.lastVisitedAt(),
+                    lr.createdAt()
             );
         });
     }
@@ -159,7 +180,7 @@ public class MicrositeService {
         verifyOwnership(microsite, firebaseUid);
 
         if (microsite.getSlideCount() == 0) {
-            throw new BusinessException("EMPTY_MICROSITE", "Cannot publish a microsite with no slides");
+            throw new BusinessException("Cannot publish a microsite with no slides", "EMPTY_MICROSITE");
         }
 
         microsite.publish();
@@ -188,7 +209,7 @@ public class MicrositeService {
         verifyOwnership(microsite, firebaseUid);
 
         if (scheduledAt.isBefore(LocalDateTime.now())) {
-            throw new BusinessException("INVALID_SCHEDULE", "Scheduled time must be in the future");
+            throw new BusinessException("Scheduled time must be in the future", "INVALID_SCHEDULE");
         }
 
         microsite.setStatus(MicrositeStatus.SCHEDULED);
@@ -255,9 +276,41 @@ public class MicrositeService {
         return new MicrositeResponse(
                 response.id(), response.title(), response.slug(), response.recipientName(),
                 response.category(), response.status(), response.themeId(),
-                response.isAnonymous(), response.isOneTimeView(), response.musicUrl(),
-                response.scheduledAt(), response.publishedAt(), response.createdAt(),
-                response.slides(), response.slideCount(), (int) views
+                response.isAnonymous(), response.isOneTimeView(), response.isPasswordProtected(),
+                response.musicUrl(), response.musicProvider(), response.musicTrackId(),
+                response.scheduledAt(), response.publishedAt(),
+                response.createdAt(), response.slides(), response.slideCount(), (int) views
+        );
+    }
+
+    // ── Public projection (used by the visitor-facing controller) ────────
+
+    /**
+     * Builds the response served to anonymous visitors.
+     *
+     * <p>When the microsite is password-protected and the visitor has not yet
+     * unlocked it, slides are withheld so the content never reaches the client
+     * before the password is verified. Metadata (title, recipient, theme) is
+     * still returned so the gate can be branded.
+     */
+    @Transactional(readOnly = true)
+    public MicrositeResponse toPublicResponse(Microsite microsite, boolean unlocked) {
+        MicrositeResponse full = enrichResponse(
+                micrositeMapper.toResponse(microsite), microsite.getId());
+
+        if (!microsite.isPasswordProtected() || unlocked) {
+            return full;
+        }
+
+        return new MicrositeResponse(
+                full.id(), full.title(), full.slug(), full.recipientName(),
+                full.category(), full.status(), full.themeId(),
+                full.isAnonymous(), full.isOneTimeView(), true,
+                // Music is withheld along with the slides — the track itself is
+                // part of the surprise.
+                null, "NONE", null,
+                full.scheduledAt(), full.publishedAt(), full.createdAt(),
+                List.of(), full.slideCount(), full.viewCount()
         );
     }
 }

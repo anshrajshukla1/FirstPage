@@ -4,6 +4,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from "axios";
 import type { ApiResponse } from "@/types";
+import { getVisitorSessionId } from "@/lib/visitor-session";
 
 // ── Typed error ────────────────────────────────────────────────────────
 
@@ -34,8 +35,13 @@ export function setTokenGetter(fn: () => string | null) {
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getToken?.();
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (config.headers) {
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      // Lets the backend count unique visitors and attribute anonymous
+      // reactions/replies without a cookie or login.
+      config.headers["X-Visitor-Session"] = getVisitorSessionId();
     }
     return config;
   },
@@ -55,8 +61,10 @@ apiClient.interceptors.response.use(
         "An unexpected error occurred",
     };
 
-    if (apiError.status === 401) {
-      // Dispatch logout will be handled by the auth listener
+    // Only force a logout when the *authenticated* session was rejected.
+    // A 401 from a public endpoint must not sign the user out.
+    const wasAuthenticated = Boolean(error.config?.headers?.Authorization);
+    if (apiError.status === 401 && wasAuthenticated) {
       window.dispatchEvent(new CustomEvent("auth:unauthorized"));
     }
 

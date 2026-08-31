@@ -7,14 +7,19 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 import lombok.Builder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Represents a single page/slide within a microsite experience.
  * Each slide has a type (intro, story, photos, countdown, etc.),
- * content stored as JSON, and an animation type for transitions.
+ * free prose in {@code content}, structured per-type settings in
+ * {@code config}, and an animation type for transitions.
  */
 @Entity
 @Table(name = "slides", indexes = {
@@ -40,9 +45,21 @@ public class Slide extends BaseEntity {
 
     private String title;
 
-    /** JSON content storing slide-specific data (text, links, config). */
+    /** Free prose for the narrative slide types (STORY, CUSTOM). */
     @Column(columnDefinition = "TEXT")
     private String content;
+
+    /**
+     * Structured, type-specific settings — a countdown's target instant, a
+     * quote's attribution, a proposal's question and button labels, a
+     * timeline's entries. The shape is determined by {@link #type} and is
+     * validated on the client; the column itself stays schema-free so a new
+     * slide type needs no migration.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    @Builder.Default
+    private Map<String, Object> config = new LinkedHashMap<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "animation_type")

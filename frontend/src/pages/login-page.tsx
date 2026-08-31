@@ -1,5 +1,6 @@
 import { Helmet } from "react-helmet-async";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { AlertCircle } from "lucide-react";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -27,7 +28,7 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 
 export function LoginPage() {
-  const { signInWithGoogle, isLoading } = useAuth();
+  const { signInWithGoogle, isLoading, error } = useAuth();
 
   return (
     <>
@@ -44,6 +45,22 @@ export function LoginPage() {
             Sign in to create and manage your personal pages
           </p>
         </div>
+
+        {/* Sign-in failures used to be console-only, so the button just looked inert. */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              role="alert"
+              className="flex items-start gap-2 rounded-xl border border-error/30 bg-error/5 px-3 py-2.5 text-left text-sm text-error"
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <button
           onClick={signInWithGoogle}

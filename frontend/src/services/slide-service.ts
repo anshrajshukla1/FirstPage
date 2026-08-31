@@ -54,11 +54,18 @@ export async function uploadMedia(
   file: File,
   type: "IMAGE" | "VIDEO" | "AUDIO" | "VOICE_NOTE",
   caption?: string,
+  /**
+   * Attaches the upload to one slide. Without it the media hangs off the
+   * microsite only and never appears in `SlideResponse.media`, which is why
+   * photo slides used to come back empty.
+   */
+  slideId?: string,
 ): Promise<Media> {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("type", type);
   if (caption) formData.append("caption", caption);
+  if (slideId) formData.append("slideId", slideId);
 
   const response = await apiClient.post<{ data: Media }>(
     `/microsites/${micrositeId}/media`,
@@ -70,6 +77,30 @@ export async function uploadMedia(
 
 export async function getMedia(micrositeId: string): Promise<Media[]> {
   return get<Media[]>(`/microsites/${micrositeId}/media`);
+}
+
+/** Captions are written after the upload, once the sender sees the photo. */
+export async function updateMediaCaption(
+  micrositeId: string,
+  mediaId: string,
+  caption: string,
+): Promise<Media> {
+  const response = await apiClient.patch<{ data: Media }>(
+    `/microsites/${micrositeId}/media/${mediaId}`,
+    { caption },
+  );
+  return response.data.data;
+}
+
+/** `mediaIds` in display order. Only the listed items move. */
+export async function reorderMedia(
+  micrositeId: string,
+  mediaIds: string[],
+): Promise<Media[]> {
+  return post<Media[], { mediaIds: string[] }>(
+    `/microsites/${micrositeId}/media/reorder`,
+    { mediaIds },
+  );
 }
 
 export async function deleteMedia(

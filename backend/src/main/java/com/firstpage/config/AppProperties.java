@@ -14,6 +14,21 @@ public class AppProperties {
     private Cors cors = new Cors();
     private Media media = new Media();
 
+    /**
+     * Where the single-page app is served from. Used by the share-link endpoint
+     * to bounce real visitors on to the viewer after a crawler has read the
+     * link-preview tags.
+     */
+    private String frontendBaseUrl = "http://localhost:3001";
+
+    public String getFrontendBaseUrl() {
+        return frontendBaseUrl;
+    }
+
+    public void setFrontendBaseUrl(String frontendBaseUrl) {
+        this.frontendBaseUrl = frontendBaseUrl;
+    }
+
     public Ai getAi() {
         return ai;
     }
@@ -66,7 +81,8 @@ public class AppProperties {
      * CORS configuration properties.
      */
     public static class Cors {
-        private List<String> allowedOrigins = List.of("http://localhost:3000", "http://localhost:5173");
+        private List<String> allowedOrigins = List.of(
+                "http://localhost:3000", "http://localhost:3001", "http://localhost:5173");
 
         public List<String> getAllowedOrigins() {
             return allowedOrigins;
@@ -83,6 +99,9 @@ public class AppProperties {
     public static class Media {
         private long maxImageSize = 10_485_760L;  // 10 MB
         private long maxVideoSize = 52_428_800L;  // 50 MB
+        // Its own limit rather than the video one: a voice note is a minute of
+        // speech, and 50 MB of it is a mistake worth rejecting.
+        private long maxAudioSize = 10_485_760L;  // 10 MB
 
         public long getMaxImageSize() {
             return maxImageSize;
@@ -98,6 +117,14 @@ public class AppProperties {
 
         public void setMaxVideoSize(long maxVideoSize) {
             this.maxVideoSize = maxVideoSize;
+        }
+
+        public long getMaxAudioSize() {
+            return maxAudioSize;
+        }
+
+        public void setMaxAudioSize(long maxAudioSize) {
+            this.maxAudioSize = maxAudioSize;
         }
     }
 }

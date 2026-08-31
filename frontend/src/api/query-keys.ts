@@ -14,6 +14,11 @@ export const micrositeKeys = {
   bySlug: (slug: string) => [...micrositeKeys.all, "slug", slug] as const,
 };
 
+export const slideKeys = {
+  all: ["slides"] as const,
+  list: (micrositeId: string) => [...slideKeys.all, micrositeId] as const,
+};
+
 export const themeKeys = {
   all: ["themes"] as const,
   lists: () => [...themeKeys.all, "list"] as const,
@@ -34,6 +39,7 @@ export const analyticsKeys = {
 export const queryKeys = {
   users: userKeys,
   microsites: micrositeKeys,
+  slides: slideKeys,
   themes: themeKeys,
   notifications: notificationKeys,
   analytics: analyticsKeys,

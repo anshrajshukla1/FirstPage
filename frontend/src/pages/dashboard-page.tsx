@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion } from "motion/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,7 +11,10 @@ import {
   ExternalLink,
   Pencil,
   Layers,
+  Clock,
   TrendingUp,
+  Settings,
+  Share2,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/common/page-header";
@@ -19,13 +22,17 @@ import { EmptyState } from "@/components/common/empty-state";
 import { CategoryBadge } from "@/components/common/category-badge";
 import { StatusBadge } from "@/components/common/status-badge";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
+import { DropdownMenu, type MenuItem } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ShareSheet } from "@/components/ui/share-sheet";
+import { MicrositeSettingsDialog } from "@/components/microsite-settings-dialog";
 import { getMyMicrosites, deleteMicrosite } from "@/services/microsite-service";
 import { getDashboardAnalytics } from "@/services/analytics-service";
 import { queryKeys } from "@/api/query-keys";
 import { ROUTES } from "@/constants/routes";
 import { cn, formatRelativeTime } from "@/lib/utils";
-import type { MicrositeListItem } from "@/types";
-import { useState } from "react";
+import { MicrositeStatus, type MicrositeListItem } from "@/types";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
 // ── Stats Card ─────────────────────────────────────────────────────────
@@ -75,11 +82,57 @@ function StatCard({ icon, label, value, trend, color }: StatCardProps) {
 interface MicrositeCardProps {
   microsite: MicrositeListItem;
   index: number;
-  onDelete: (id: string) => void;
+  onDelete: (microsite: MicrositeListItem) => void;
+  onShare: (microsite: MicrositeListItem) => void;
+  onSettings: (microsite: MicrositeListItem) => void;
 }
 
-function MicrositeCard({ microsite, index, onDelete }: MicrositeCardProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
+function MicrositeCard({
+  microsite,
+  index,
+  onDelete,
+  onShare,
+  onSettings,
+}: MicrositeCardProps) {
+  const navigate = useNavigate();
+  const published = microsite.status === MicrositeStatus.PUBLISHED;
+
+  const menuItems: MenuItem[] = [
+    {
+      label: "Edit",
+      icon: <Pencil className="h-3.5 w-3.5" />,
+      onSelect: () => navigate(ROUTES.EDIT(microsite.id)),
+    },
+    {
+      label: "Share",
+      icon: <Share2 className="h-3.5 w-3.5" />,
+      // A draft has no public page yet, so a link would 404 on the recipient.
+      disabled: !published,
+      onSelect: () => onShare(microsite),
+    },
+    {
+      label: "View live",
+      icon: <ExternalLink className="h-3.5 w-3.5" />,
+      disabled: !published,
+      onSelect: () =>
+        window.open(
+          ROUTES.PUBLIC_VIEWER(microsite.slug),
+          "_blank",
+          "noopener,noreferrer",
+        ),
+    },
+    {
+      label: "Settings",
+      icon: <Settings className="h-3.5 w-3.5" />,
+      onSelect: () => onSettings(microsite),
+    },
+    {
+      label: "Delete",
+      icon: <Trash2 className="h-3.5 w-3.5" />,
+      destructive: true,
+      onSelect: () => onDelete(microsite),
+    },
+  ];
 
   return (
     <motion.div
@@ -108,54 +161,22 @@ function MicrositeCard({ microsite, index, onDelete }: MicrositeCardProps) {
           <StatusBadge status={microsite.status} />
         </div>
 
-        {/* Actions menu */}
+        {/*
+          The menu is portalled out of this card: the thumbnail's hover zoom
+          needs `overflow-hidden` above, which would otherwise crop it.
+        */}
         <div className="absolute right-3 top-3">
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/80 text-text-secondary backdrop-blur-sm transition-colors hover:bg-background hover:text-text-primary"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </button>
-            {menuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setMenuOpen(false)}
-                />
-                <div className="absolute right-0 top-full z-20 mt-1 w-40 overflow-hidden rounded-xl border border-border bg-background shadow-xl">
-                  <Link
-                    to={ROUTES.EDIT(microsite.id)}
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Edit
-                  </Link>
-                  <a
-                    href={`/${microsite.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-surface-hover hover:text-text-primary"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    View Live
-                  </a>
-                  <button
-                    onClick={() => {
-                      onDelete(microsite.id);
-                      setMenuOpen(false);
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-sm text-error hover:bg-error/5"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    Delete
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <DropdownMenu
+            items={menuItems}
+            trigger={
+              <button
+                aria-label={`Actions for ${microsite.title}`}
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-background/80 text-text-secondary backdrop-blur-sm transition-colors hover:bg-background hover:text-text-primary focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+              >
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            }
+          />
         </div>
       </div>
 
@@ -169,10 +190,6 @@ function MicrositeCard({ microsite, index, onDelete }: MicrositeCardProps) {
         </h3>
         <div className="mt-3 flex items-center gap-4 text-xs text-text-muted">
           <span className="flex items-center gap-1">
-            <Eye className="h-3 w-3" />
-            {microsite.viewCount} views
-          </span>
-          <span className="flex items-center gap-1">
             <Layers className="h-3 w-3" />
             {microsite.slideCount} slides
           </span>
@@ -180,6 +197,34 @@ function MicrositeCard({ microsite, index, onDelete }: MicrositeCardProps) {
             {formatRelativeTime(microsite.createdAt)}
           </span>
         </div>
+
+        {/*
+          The one thing a sender comes back to check. A view count answers a
+          question nobody asked; whether it has been opened, and when, is the
+          whole reason they made the page.
+        */}
+        {microsite.status === MicrositeStatus.PUBLISHED && (
+          <div className="mt-2.5 flex items-center gap-1.5 border-t border-border pt-2.5 text-xs">
+            {microsite.lastViewedAt ? (
+              <>
+                <Eye className="h-3 w-3 shrink-0 text-primary" />
+                <span className="font-medium text-text-primary">
+                  Opened {formatRelativeTime(microsite.lastViewedAt)}
+                </span>
+                {microsite.viewCount > 1 && (
+                  <span className="text-text-muted">
+                    · {microsite.viewCount} visitors
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <Clock className="h-3 w-3 shrink-0 text-text-muted" />
+                <span className="text-text-muted">Not opened yet</span>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -190,6 +235,16 @@ function MicrositeCard({ microsite, index, onDelete }: MicrositeCardProps) {
 export function DashboardPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const query = (searchParams.get("q") ?? "").trim().toLowerCase();
+
+  const [pendingDelete, setPendingDelete] = useState<MicrositeListItem | null>(
+    null,
+  );
+  const [sharing, setSharing] = useState<MicrositeListItem | null>(null);
+  const [settingsFor, setSettingsFor] = useState<MicrositeListItem | null>(null);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: [...queryKeys.microsites.all, 0, 20],
@@ -200,25 +255,46 @@ export function DashboardPage() {
     mutationFn: deleteMicrosite,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.microsites.all });
-      toast.success("Microsite deleted");
+      toast.success("Page deleted");
+      setPendingDelete(null);
     },
     onError: () => {
-      toast.error("Failed to delete microsite");
+      toast.error("Couldn't delete the page. Try again.");
     },
   });
 
-  const microsites = data?.content ?? [];
+  const allMicrosites = data?.content ?? [];
+  // Filtered client-side: the backend has no search endpoint, and the
+  // dashboard already holds the page it would search.
+  const microsites = query
+    ? allMicrosites.filter(
+        (m) =>
+          m.title.toLowerCase().includes(query) ||
+          m.slug.toLowerCase().includes(query),
+      )
+    : allMicrosites;
 
   const { data: analytics } = useQuery({
     queryKey: ["analytics", "dashboard"],
     queryFn: getDashboardAnalytics,
   });
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this microsite?")) {
-      deletemutation.mutate(id);
-    }
-  };
+  /*
+   * Publishing navigates here with the id it just published, because the link
+   * is the whole point of publishing and the editor is the wrong place to hand
+   * it over. Cleared from history state immediately so a back-navigation or a
+   * refresh doesn't reopen the sheet.
+   */
+  const justPublished = (location.state as { justPublished?: string } | null)
+    ?.justPublished;
+
+  useEffect(() => {
+    if (!justPublished) return;
+    const match = allMicrosites.find((m) => m.id === justPublished);
+    if (!match) return;
+    setSharing(match);
+    navigate(ROUTES.DASHBOARD, { replace: true, state: null });
+  }, [justPublished, allMicrosites, navigate]);
 
   const firstName = user?.displayName?.split(" ")[0] ?? "there";
 
@@ -278,20 +354,28 @@ export function DashboardPage() {
             description="We couldn't load your microsites. Please try again."
           />
         ) : microsites.length === 0 ? (
-          <EmptyState
-            icon={<Layers className="h-7 w-7" />}
-            title="No microsites yet"
-            description="Create your first personal page and share it with someone special."
-            action={
-              <Link
-                to={ROUTES.CREATE}
-                className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover"
-              >
-                <Plus className="h-4 w-4" />
-                Create Your First Page
-              </Link>
-            }
-          />
+          query ? (
+            <EmptyState
+              icon={<Layers className="h-7 w-7" />}
+              title="No matches"
+              description={`Nothing in your pages matches "${searchParams.get("q")}".`}
+            />
+          ) : (
+            <EmptyState
+              icon={<Layers className="h-7 w-7" />}
+              title="No microsites yet"
+              description="Create your first personal page and share it with someone special."
+              action={
+                <Link
+                  to={ROUTES.CREATE}
+                  className="flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Your First Page
+                </Link>
+              }
+            />
+          )
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {microsites.map((microsite, i) => (
@@ -299,12 +383,49 @@ export function DashboardPage() {
                 key={microsite.id}
                 microsite={microsite}
                 index={i}
-                onDelete={handleDelete}
+                onDelete={setPendingDelete}
+                onShare={setSharing}
+                onSettings={setSettingsFor}
               />
             ))}
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Delete this page?"
+        description={
+          pendingDelete
+            ? `“${pendingDelete.title}” and everything on it will be removed. Anyone holding the link will see a page that no longer exists.`
+            : undefined
+        }
+        confirmLabel="Delete page"
+        destructive
+        busy={deletemutation.isPending}
+        onConfirm={() => pendingDelete && deletemutation.mutate(pendingDelete.id)}
+        onCancel={() => setPendingDelete(null)}
+      />
+
+      {sharing && (
+        <ShareSheet
+          open
+          onClose={() => setSharing(null)}
+          slug={sharing.slug}
+          title={sharing.title}
+        />
+      )}
+
+      {/*
+        Kept mounted while a page is selected so the dialog can animate out.
+        The card list only carries summary fields, so the dialog loads the full
+        page itself from the id.
+      */}
+      <MicrositeSettingsDialog
+        open={settingsFor !== null}
+        onClose={() => setSettingsFor(null)}
+        micrositeId={settingsFor?.id ?? ""}
+      />
     </>
   );
 }

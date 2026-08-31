@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence, Reorder } from "motion/react";
@@ -10,45 +10,35 @@ import {
   Save,
   ArrowLeft,
   Send,
-  Wand2,
-  Image as ImageIcon,
-  Type,
-  Quote,
-  Clock,
-  Film,
   Sparkles,
   ChevronRight,
-  Palette,
-  Settings2,
+  Settings,
   X,
 } from "lucide-react";
-import { useMicrosite, useUpdateMicrosite, usePublishMicrosite } from "@/hooks/use-microsites";
+import { useMicrosite, usePublishMicrosite } from "@/hooks/use-microsites";
 import {
   getSlides,
   createSlide,
   updateSlide,
   deleteSlide,
   reorderSlides,
-  generateAIContent,
 } from "@/services/slide-service";
 import { LoadingSpinner } from "@/components/common/loading-spinner";
+import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { MicrositeSettingsDialog } from "@/components/microsite-settings-dialog";
+import {
+  SLIDE_EDITORS,
+  SLIDE_TYPE_ORDER,
+  type SlideDraft,
+} from "@/components/slide-editors";
+import { slideKeys } from "@/api/query-keys";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
-import type { Slide, SlideType, AnimationType } from "@/types";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { MicrositeStatus, SlideType, type Slide } from "@/types";
+import { defaultSlideConfig } from "@/types/slide-config";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
-
-// ── Slide type config ──────────────────────────────────────────────────
-
-const slideTypes: { value: SlideType; label: string; icon: React.ElementType; description: string }[] = [
-  { value: "TEXT" as SlideType, label: "Text", icon: Type, description: "A text block with title" },
-  { value: "IMAGE" as SlideType, label: "Photo", icon: ImageIcon, description: "Fullscreen image" },
-  { value: "GALLERY" as SlideType, label: "Gallery", icon: Film, description: "Photo carousel" },
-  { value: "QUOTE" as SlideType, label: "Quote", icon: Quote, description: "Beautiful quote card" },
-  { value: "LETTER" as SlideType, label: "Letter", icon: Type, description: "Handwritten style letter" },
-  { value: "COUNTDOWN" as SlideType, label: "Countdown", icon: Clock, description: "Countdown timer" },
-  { value: "VIDEO" as SlideType, label: "Video", icon: Film, description: "Embedded video" },
-];
 
 // ── Slide Panel (left sidebar) ─────────────────────────────────────────
 
@@ -103,9 +93,11 @@ function SlidePanel({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium text-text-primary">
-                    {slide.title || slide.type}
+                    {slide.title || SLIDE_EDITORS[slide.type].label}
                   </p>
-                  <p className="text-[10px] text-text-muted">{slide.type}</p>
+                  <p className="text-[10px] text-text-muted">
+                    {SLIDE_EDITORS[slide.type].label}
+                  </p>
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDelete(slide.id); }}
@@ -137,6 +129,13 @@ function SlidePanel({
 
 // ── Slide Editor (main content) ────────────────────────────────────────
 
+/**
+ * Holds one slide's draft and hands it to that type's editor.
+ *
+ * <p>Every type used to get the same Title + Content pair here, so a countdown
+ * had nowhere to put a date. The per-type form now comes from `SLIDE_EDITORS`
+ * and this component only owns the draft and the Save button.
+ */
 function SlideEditor({
   slide,
   micrositeId,
@@ -146,41 +145,37 @@ function SlideEditor({
   micrositeId: string;
   onUpdate: () => void;
 }) {
-  const [title, setTitle] = useState(slide.title ?? "");
-  const [content, setContent] = useState(slide.content ?? "");
-  const [aiPrompt, setAiPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
+  const entry = SLIDE_EDITORS[slide.type];
+  const [draft, setDraftState] = useState<SlideDraft>({
+    title: slide.title ?? "",
+    content: slide.content ?? "",
+    config: slide.config,
+  });
   const [isSaving, setIsSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  const setDraft = (patch: Partial<SlideDraft>) => {
+    setDraftState((prev) => ({ ...prev, ...patch }));
+    setDirty(true);
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
     try {
       await updateSlide(micrositeId, slide.id, {
-        title: title || undefined,
-        content: content || undefined,
+        // Empty is a real choice — sending undefined would leave the old text in
+        // place and make clearing a field impossible.
+        title: draft.title,
+        content: draft.content,
+        config: draft.config,
       });
+      setDirty(false);
       toast.success("Slide saved");
       onUpdate();
     } catch {
-      toast.error("Failed to save");
+      toast.error("Couldn't save the slide. Try again.");
     }
     setIsSaving(false);
-  };
-
-  const handleAIGenerate = async () => {
-    if (!aiPrompt.trim()) return;
-    setIsGenerating(true);
-    try {
-      const result = await generateAIContent({
-        prompt: aiPrompt,
-        context: `This is for a slide titled "${title}" of type "${slide.type}"`,
-      });
-      setContent(result.generatedContent);
-      toast.success("AI content generated!");
-    } catch {
-      toast.error("AI generation failed");
-    }
-    setIsGenerating(false);
   };
 
   return (
@@ -189,88 +184,33 @@ function SlideEditor({
       <div className="flex items-center justify-between border-b border-border px-6 py-3">
         <div className="flex items-center gap-2">
           <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            {slide.type}
+            {entry.label}
           </span>
           <span className="text-xs text-text-muted">
-            Slide #{slide.orderIndex + 1}
+            Slide {slide.orderIndex + 1}
           </span>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={isSaving}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-        >
-          {isSaving ? (
-            <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-          ) : (
-            <Save className="h-3 w-3" />
+        <div className="flex items-center gap-3">
+          {dirty && (
+            <span className="text-xs text-text-muted">Unsaved changes</span>
           )}
-          Save
-        </button>
+          <Button size="sm" onClick={handleSave} busy={isSaving}>
+            {!isSaving && <Save className="h-3 w-3" />}
+            Save
+          </Button>
+        </div>
       </div>
 
       {/* Content area */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-2xl space-y-6">
-          {/* Title */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-text-primary">
-              Slide Title
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Give this slide a title..."
-              className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-lg font-semibold text-text-primary placeholder-text-muted outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-
-          {/* Content */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-text-primary">
-              Content
-            </label>
-            <textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Write your heartfelt message here..."
-              rows={8}
-              className="w-full resize-none rounded-xl border border-border bg-surface px-4 py-3 text-text-primary placeholder-text-muted outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
-            />
-          </div>
-
-          {/* AI Generation */}
-          <div className="rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-5">
-            <div className="mb-3 flex items-center gap-2">
-              <Wand2 className="h-4 w-4 text-primary" />
-              <h4 className="text-sm font-semibold text-text-primary">
-                AI Content Assistant
-              </h4>
-            </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleAIGenerate()}
-                placeholder="e.g., Write a heartfelt birthday message for my best friend..."
-                className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-text-primary outline-none focus:border-primary"
-              />
-              <button
-                onClick={handleAIGenerate}
-                disabled={isGenerating || !aiPrompt.trim()}
-                className="flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
-              >
-                {isGenerating ? (
-                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                ) : (
-                  <Sparkles className="h-3 w-3" />
-                )}
-                Generate
-              </button>
-            </div>
-          </div>
+        <div className="mx-auto flex max-w-2xl flex-col gap-6">
+          <entry.Editor
+            slide={slide}
+            micrositeId={micrositeId}
+            draft={draft}
+            setDraft={setDraft}
+            onMediaChange={onUpdate}
+          />
         </div>
       </div>
     </div>
@@ -308,30 +248,36 @@ function AddSlideModal({
         >
           <div className="mb-5 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-text-primary">
-              Add a Slide
+              Add a slide
             </h3>
-            <button onClick={onClose} className="rounded-lg p-1 text-text-muted hover:bg-surface">
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="rounded-lg p-1 text-text-muted hover:bg-surface"
+            >
               <X className="h-5 w-5" />
             </button>
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2">
-            {slideTypes.map((st) => {
-              const Icon = st.icon;
+            {SLIDE_TYPE_ORDER.map((type) => {
+              const { label, description, icon: Icon } = SLIDE_EDITORS[type];
               return (
                 <motion.button
-                  key={st.value}
+                  key={type}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => onAdd(st.value)}
+                  onClick={() => onAdd(type)}
                   className="flex items-center gap-3 rounded-xl border border-border bg-surface/50 p-3 text-left transition-colors hover:border-primary/30 hover:bg-primary/5"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <Icon className="h-4 w-4 text-primary" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">{st.label}</p>
-                    <p className="text-[10px] text-text-muted">{st.description}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-text-primary">
+                      {label}
+                    </p>
+                    <p className="text-[10px] text-text-muted">{description}</p>
                   </div>
                 </motion.button>
               );
@@ -351,54 +297,77 @@ export function EditorPage() {
   const queryClient = useQueryClient();
 
   const { data: microsite, isLoading: micrositeLoading } = useMicrosite(id);
-  const updateMutation = useUpdateMicrosite(id!);
   const publishMutation = usePublishMicrosite();
 
   const { data: slides = [], isLoading: slidesLoading } = useQuery({
-    queryKey: ["slides", id],
+    queryKey: slideKeys.list(id ?? ""),
     queryFn: () => getSlides(id!),
     enabled: !!id,
   });
 
   const [activeSlideId, setActiveSlideId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const activeSlide = slides.find((s) => s.id === activeSlideId) ?? null;
 
-  // Auto-select first slide
-  if (!activeSlideId && slides.length > 0) {
-    setActiveSlideId(slides[0].id);
-  }
+  // Keep a valid slide selected: pick the first one on load, and recover if the
+  // active slide disappears (deleted elsewhere, refetch, etc.).
+  useEffect(() => {
+    if (slides.length === 0) {
+      setActiveSlideId(null);
+    } else if (!slides.some((s) => s.id === activeSlideId)) {
+      setActiveSlideId(slides[0].id);
+    }
+  }, [slides, activeSlideId]);
 
   const invalidateSlides = () => {
-    queryClient.invalidateQueries({ queryKey: ["slides", id] });
+    queryClient.invalidateQueries({ queryKey: slideKeys.list(id ?? "") });
   };
 
   const handleAddSlide = async (type: SlideType) => {
     if (!id) return;
     try {
-      const newSlide = await createSlide(id, { type });
-      invalidateSlides();
+      const newSlide = await createSlide(id, {
+        type,
+        config: defaultSlideConfig(type),
+      });
+      /*
+       * Seed the cache before selecting the slide. Invalidating first would
+       * leave the recovery effect above running against the pre-add list,
+       * finding the new id missing, and snapping the editor back to slide 1 —
+       * which is exactly the jump this fixes.
+       */
+      queryClient.setQueryData<Slide[]>(slideKeys.list(id), (prev) => [
+        ...(prev ?? []),
+        newSlide,
+      ]);
       setActiveSlideId(newSlide.id);
       setShowAddModal(false);
-      toast.success("Slide added");
+      void queryClient.invalidateQueries({ queryKey: slideKeys.list(id) });
     } catch {
-      toast.error("Failed to add slide");
+      toast.error("Couldn't add the slide. Try again.");
     }
   };
 
-  const handleDeleteSlide = async (slideId: string) => {
-    if (!id || !window.confirm("Delete this slide?")) return;
+  const handleDeleteSlide = async () => {
+    const slideId = pendingDeleteId;
+    if (!id || !slideId) return;
+    setIsDeleting(true);
     try {
       await deleteSlide(id, slideId);
       if (activeSlideId === slideId) {
         setActiveSlideId(slides.find((s) => s.id !== slideId)?.id ?? null);
       }
       invalidateSlides();
+      setPendingDeleteId(null);
       toast.success("Slide deleted");
     } catch {
-      toast.error("Failed to delete");
+      toast.error("Couldn't delete the slide. Try again.");
     }
+    setIsDeleting(false);
   };
 
   const handleReorder = useCallback(
@@ -406,9 +375,11 @@ export function EditorPage() {
       if (!id) return;
       try {
         await reorderSlides(id, newOrder.map((s) => s.id));
-        invalidateSlides();
       } catch {
-        // Silently fail — UI already shows the new order
+        toast.error("Could not save the new order");
+      } finally {
+        // Refetch either way so the UI can't drift from the server's order.
+        invalidateSlides();
       }
     },
     [id],
@@ -418,7 +389,9 @@ export function EditorPage() {
     if (!id) return;
     try {
       await publishMutation.mutateAsync(id);
-      toast.success("Published! Your page is live 🎉");
+      // The link is the point of publishing, so hand it over on the dashboard
+      // rather than leaving the sender in the editor with a toast.
+      navigate(ROUTES.DASHBOARD, { state: { justPublished: id } });
     } catch {
       toast.error("Cannot publish — add at least one slide");
     }
@@ -469,9 +442,9 @@ export function EditorPage() {
             </h1>
             <span className={cn(
               "rounded-full px-2 py-0.5 text-[10px] font-medium",
-              microsite.status === "PUBLISHED"
+              microsite.status === MicrositeStatus.PUBLISHED
                 ? "bg-success/10 text-success"
-                : microsite.status === "DRAFT"
+                : microsite.status === MicrositeStatus.DRAFT
                 ? "bg-amber-500/10 text-amber-600"
                 : "bg-border text-text-muted"
             )}>
@@ -481,8 +454,23 @@ export function EditorPage() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.open(`/${microsite.slug}`, "_blank")}
+              onClick={() => setShowSettings(true)}
+              title="Password, anonymity, music and the recipient's name"
               className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface"
+            >
+              <Settings className="h-3 w-3" /> Settings
+            </button>
+            <button
+              onClick={() =>
+                window.open(ROUTES.PUBLIC_VIEWER(microsite.slug), "_blank")
+              }
+              disabled={microsite.status !== MicrositeStatus.PUBLISHED}
+              title={
+                microsite.status === MicrositeStatus.PUBLISHED
+                  ? "Open the live page"
+                  : "Publish first — the public page is only served once published"
+              }
+              className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Eye className="h-3 w-3" /> Preview
             </button>
@@ -509,7 +497,7 @@ export function EditorPage() {
             activeSlideId={activeSlideId}
             onSelect={setActiveSlideId}
             onAdd={() => setShowAddModal(true)}
-            onDelete={handleDeleteSlide}
+            onDelete={setPendingDeleteId}
             onReorder={handleReorder}
           />
 
@@ -546,6 +534,23 @@ export function EditorPage() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={handleAddSlide}
+      />
+
+      <ConfirmDialog
+        open={pendingDeleteId !== null}
+        title="Delete this slide?"
+        description="Its text and photos go with it. The rest of the page is untouched."
+        confirmLabel="Delete slide"
+        destructive
+        busy={isDeleting}
+        onConfirm={handleDeleteSlide}
+        onCancel={() => setPendingDeleteId(null)}
+      />
+
+      <MicrositeSettingsDialog
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        micrositeId={id ?? ""}
       />
     </>
   );

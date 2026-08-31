@@ -6,7 +6,7 @@ export const ROUTES = {
   EDIT: (id: string) => `/dashboard/microsites/${id}`,
   ANALYTICS: (id: string) => `/dashboard/analytics/${id}`,
   SETTINGS: "/dashboard/settings",
-  PUBLIC_VIEWER: (slug: string) => `/${slug}`,
+  PUBLIC_VIEWER: (slug: string) => `/p/${slug}`,
 } as const;
 
 export const NAV_ITEMS = [

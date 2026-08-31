@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { Category } from "@/types";
-import { CATEGORY_META } from "@/constants/categories";
+import { getCategoryMeta } from "@/constants/categories";
 
 interface CategoryBadgeProps {
   category: Category;
@@ -8,7 +8,8 @@ interface CategoryBadgeProps {
 }
 
 export function CategoryBadge({ category, className }: CategoryBadgeProps) {
-  const meta = CATEGORY_META[category];
+  // Falls back rather than crashing if the backend adds a category first.
+  const meta = getCategoryMeta(category);
 
   return (
     <span

@@ -192,6 +192,10 @@ export function HomePage() {
   const { scrollYProgress } = useScroll({ target: containerRef });
   const heroOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
   const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  // Signed-in visitors shouldn't be bounced through /login just to be
+  // redirected back out again.
+  const ctaTarget = isAuthenticated ? ROUTES.DASHBOARD : ROUTES.LOGIN;
 
   return (
     <>
@@ -282,16 +286,20 @@ export function HomePage() {
               className="mt-10 flex flex-col items-center gap-4 sm:flex-row"
             >
               <Link
-                to={ROUTES.LOGIN}
+                to={ctaTarget}
                 className="group flex items-center gap-2 rounded-2xl bg-primary px-8 py-3.5 text-base font-semibold text-white shadow-xl shadow-primary/25 transition-all hover:bg-primary-hover hover:shadow-2xl hover:shadow-primary/30"
               >
-                Get Started — It&apos;s Free
+                {isAuthenticated ? "Go to your dashboard" : "Get Started — It's Free"}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
-              <button className="flex items-center gap-2 rounded-2xl border border-border px-6 py-3.5 text-base font-medium text-text-secondary transition-all hover:bg-surface hover:text-text-primary">
+              {/* Native anchor scroll — no JS needed, and it deep-links. */}
+              <a
+                href="#how-it-works"
+                className="flex items-center gap-2 rounded-2xl border border-border px-6 py-3.5 text-base font-medium text-text-secondary transition-all hover:bg-surface hover:text-text-primary"
+              >
                 <Play className="h-4 w-4" />
                 See how it works
-              </button>
+              </a>
             </motion.div>
 
             {/* Social proof */}
@@ -395,7 +403,10 @@ export function HomePage() {
         </section>
 
         {/* ── How It Works ──────────────────────────────────────────── */}
-        <section className="relative overflow-hidden bg-surface/50 py-20 md:py-28">
+        <section
+          id="how-it-works"
+          className="relative overflow-hidden bg-surface/50 py-20 md:py-28 scroll-mt-16"
+        >
           <div className="mx-auto max-w-7xl px-4 md:px-8">
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -473,10 +484,10 @@ export function HomePage() {
               Join thousands of creators making the people they love smile.
             </p>
             <Link
-              to={ROUTES.LOGIN}
+              to={ctaTarget}
               className="group mt-8 inline-flex items-center gap-2 rounded-2xl bg-primary px-10 py-4 text-lg font-semibold text-white shadow-xl shadow-primary/25 transition-all hover:bg-primary-hover hover:shadow-2xl hover:shadow-primary/30"
             >
-              Start Creating
+              {isAuthenticated ? "Open your dashboard" : "Start Creating"}
               <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
             </Link>
           </motion.div>

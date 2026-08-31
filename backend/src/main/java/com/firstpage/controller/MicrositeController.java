@@ -2,7 +2,6 @@ package com.firstpage.controller;
 
 import com.firstpage.dto.request.CreateMicrositeRequest;
 import com.firstpage.dto.request.UpdateMicrositeRequest;
-import com.firstpage.dto.request.VerifyPasswordRequest;
 import com.firstpage.dto.response.ApiResponse;
 import com.firstpage.dto.response.MicrositeListResponse;
 import com.firstpage.dto.response.MicrositeResponse;
@@ -16,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -126,7 +126,7 @@ public class MicrositeController {
     public ResponseEntity<ApiResponse<MicrositeResponse>> schedule(
             Authentication auth,
             @PathVariable UUID id,
-            @RequestParam LocalDateTime scheduledAt) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime scheduledAt) {
         return ResponseEntity.ok(ApiResponse.success(
                 micrositeService.schedule(id, getUid(auth), scheduledAt),
                 "Microsite scheduled"));
@@ -140,23 +140,6 @@ public class MicrositeController {
         return ResponseEntity.ok(ApiResponse.success(
                 micrositeService.archive(id, getUid(auth)),
                 "Microsite archived"));
-    }
-
-    // ── Public endpoints ────────────────────────────────────────────────
-
-    @GetMapping("/public/{slug}")
-    @Operation(summary = "Get published microsite by slug (public, no auth)")
-    public ResponseEntity<ApiResponse<MicrositeResponse>> getBySlug(@PathVariable String slug) {
-        return ResponseEntity.ok(ApiResponse.success(micrositeService.getBySlug(slug)));
-    }
-
-    @PostMapping("/public/{slug}/verify-password")
-    @Operation(summary = "Verify microsite password (public)")
-    public ResponseEntity<ApiResponse<Map<String, Boolean>>> verifyPassword(
-            @PathVariable String slug,
-            @Valid @RequestBody VerifyPasswordRequest request) {
-        boolean valid = micrositeService.verifyPassword(slug, request.password());
-        return ResponseEntity.ok(ApiResponse.success(Map.of("valid", valid)));
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────

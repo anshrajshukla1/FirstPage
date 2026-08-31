@@ -1,72 +1,91 @@
 // ── Enums ──────────────────────────────────────────────────────────────
+// NOTE: These are `as const` objects + union types rather than TS `enum`s
+// because tsconfig enables `erasableSyntaxOnly`. Values MUST stay in sync
+// with the backend enums in `com.firstpage.entity.enums`.
 
-export enum Category {
-  LOVE = "LOVE",
-  FRIENDSHIP = "FRIENDSHIP",
-  BIRTHDAY = "BIRTHDAY",
-  ANNIVERSARY = "ANNIVERSARY",
-  THANK_YOU = "THANK_YOU",
-  APOLOGY = "APOLOGY",
-  GRADUATION = "GRADUATION",
-  WEDDING = "WEDDING",
-  OTHER = "OTHER",
-}
+export const Category = {
+  CRUSH: "CRUSH",
+  FRIENDSHIP: "FRIENDSHIP",
+  APOLOGY: "APOLOGY",
+  BIRTHDAY: "BIRTHDAY",
+  ANNIVERSARY: "ANNIVERSARY",
+  FAREWELL: "FAREWELL",
+  PROPOSAL: "PROPOSAL",
+  THANK_YOU: "THANK_YOU",
+  CONGRATULATIONS: "CONGRATULATIONS",
+  FAMILY: "FAMILY",
+  GRADUATION: "GRADUATION",
+  BABY_WELCOME: "BABY_WELCOME",
+  CUSTOM: "CUSTOM",
+} as const;
+export type Category = (typeof Category)[keyof typeof Category];
 
-export enum MicrositeStatus {
-  DRAFT = "DRAFT",
-  PUBLISHED = "PUBLISHED",
-  ARCHIVED = "ARCHIVED",
-  SCHEDULED = "SCHEDULED",
-}
+export const MicrositeStatus = {
+  DRAFT: "DRAFT",
+  PUBLISHED: "PUBLISHED",
+  SCHEDULED: "SCHEDULED",
+  ARCHIVED: "ARCHIVED",
+} as const;
+export type MicrositeStatus =
+  (typeof MicrositeStatus)[keyof typeof MicrositeStatus];
 
-export enum SlideType {
-  TEXT = "TEXT",
-  IMAGE = "IMAGE",
-  GALLERY = "GALLERY",
-  VIDEO = "VIDEO",
-  QUOTE = "QUOTE",
-  LETTER = "LETTER",
-  TIMELINE = "TIMELINE",
-  COUNTDOWN = "COUNTDOWN",
-}
+export const SlideType = {
+  INTRO: "INTRO",
+  STORY: "STORY",
+  PHOTOS: "PHOTOS",
+  VIDEO: "VIDEO",
+  QUOTE: "QUOTE",
+  TIMELINE: "TIMELINE",
+  COUNTDOWN: "COUNTDOWN",
+  SURPRISE: "SURPRISE",
+  PROPOSAL: "PROPOSAL",
+  CUSTOM: "CUSTOM",
+} as const;
+export type SlideType = (typeof SlideType)[keyof typeof SlideType];
 
-export enum MediaType {
-  IMAGE = "IMAGE",
-  VIDEO = "VIDEO",
-  AUDIO = "AUDIO",
-}
+export const MediaType = {
+  IMAGE: "IMAGE",
+  VIDEO: "VIDEO",
+  AUDIO: "AUDIO",
+  VOICE_NOTE: "VOICE_NOTE",
+} as const;
+export type MediaType = (typeof MediaType)[keyof typeof MediaType];
 
-export enum ReactionType {
-  HEART = "HEART",
-  LAUGH = "LAUGH",
-  CRY = "CRY",
-  FIRE = "FIRE",
-  CLAP = "CLAP",
-  STAR = "STAR",
-}
+export const ReactionType = {
+  HEART: "HEART",
+  CRY: "CRY",
+  LAUGH: "LAUGH",
+  SHOCK: "SHOCK",
+  TOUCHED: "TOUCHED",
+} as const;
+export type ReactionType = (typeof ReactionType)[keyof typeof ReactionType];
 
-export enum NotificationType {
-  VIEW = "VIEW",
-  REACTION = "REACTION",
-  REPLY = "REPLY",
-  SYSTEM = "SYSTEM",
-}
+export const NotificationType = {
+  VIEWED: "VIEWED",
+  REACTED: "REACTED",
+  REPLIED: "REPLIED",
+  ACCEPTED: "ACCEPTED",
+} as const;
+export type NotificationType =
+  (typeof NotificationType)[keyof typeof NotificationType];
 
-export enum AnimationType {
-  FADE_IN = "FADE_IN",
-  SLIDE_UP = "SLIDE_UP",
-  SLIDE_LEFT = "SLIDE_LEFT",
-  SLIDE_RIGHT = "SLIDE_RIGHT",
-  ZOOM_IN = "ZOOM_IN",
-  FLIP = "FLIP",
-  BOUNCE = "BOUNCE",
-  NONE = "NONE",
-}
+export const AnimationType = {
+  FADE: "FADE",
+  SLIDE_UP: "SLIDE_UP",
+  SLIDE_LEFT: "SLIDE_LEFT",
+  ZOOM: "ZOOM",
+  BOUNCE: "BOUNCE",
+  TYPEWRITER: "TYPEWRITER",
+  PARALLAX: "PARALLAX",
+  NONE: "NONE",
+} as const;
+export type AnimationType = (typeof AnimationType)[keyof typeof AnimationType];
 
-export enum Role {
-  USER = "USER",
-  ADMIN = "ADMIN",
-}
+export const Role = {
+  USER: "USER",
+  ADMIN: "ADMIN",
+} as const;
+export type Role = (typeof Role)[keyof typeof Role];
 
 // ── Core Models ────────────────────────────────────────────────────────
 
@@ -94,10 +113,24 @@ export interface Slide {
   type: SlideType;
   title: string | null;
   content: string | null;
+  /**
+   * Type-specific settings — a countdown's target date, a proposal's question.
+   * Arrives as untyped JSON from a `jsonb` column; read it through
+   * `parseSlideConfig` in `@/types/slide-config` rather than casting.
+   */
+  config: Record<string, unknown>;
   animationType: AnimationType;
   backgroundType: string | null;
   media: Media[];
 }
+
+/** How the client should play `musicUrl`. Derived server-side on every read. */
+export const MusicProvider = {
+  YOUTUBE: "YOUTUBE",
+  AUDIO: "AUDIO",
+  NONE: "NONE",
+} as const;
+export type MusicProvider = (typeof MusicProvider)[keyof typeof MusicProvider];
 
 export interface Microsite {
   id: string;
@@ -109,7 +142,15 @@ export interface Microsite {
   themeId: string | null;
   isAnonymous: boolean;
   isOneTimeView: boolean;
+  isPasswordProtected: boolean;
   musicUrl: string | null;
+  /**
+   * A YouTube watch URL can't play in an `<audio>` element, so the player is
+   * chosen from this rather than guessed from the URL on the client.
+   */
+  musicProvider: MusicProvider;
+  /** YouTube video id, or the direct file URL for `AUDIO`. */
+  musicTrackId: string | null;
   scheduledAt: string | null;
   publishedAt: string | null;
   createdAt: string;
@@ -127,6 +168,8 @@ export interface MicrositeListItem {
   previewImageUrl: string | null;
   slideCount: number;
   viewCount: number;
+  /** Null until a recipient opens it. The sender's actual payoff. */
+  lastViewedAt: string | null;
   createdAt: string;
 }
 
@@ -134,8 +177,10 @@ export interface Theme {
   id: string;
   name: string;
   slug: string;
-  category: Category;
-  cssVariables: Record<string, string>;
+  /** Free-form grouping label from the backend (NOT a `Category`). */
+  category: string;
+  /** Raw CSS custom-property block, e.g. `--bg:#fff;--fg:#000;`. */
+  cssVariables: string;
   previewImageUrl: string | null;
   isPremium: boolean;
 }
@@ -169,8 +214,8 @@ export interface VisitorAnalytics {
 
 export interface SlideAnalytics {
   slideId: string;
-  slideIndex: number;
-  viewCount: number;
+  slideTitle: string | null;
+  views: number;
   avgTimeSpent: number;
 }
 
@@ -198,12 +243,16 @@ export interface ApiResponse<T> {
   timestamp: string;
 }
 
+/** Mirrors Spring Data's `Page<T>` JSON shape. */
 export interface PaginatedResponse<T> {
   content: T[];
   totalElements: number;
   totalPages: number;
-  page: number;
+  number: number;
   size: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
 }
 
 // ── Request DTOs ──────────────────────────────────────────────────────
@@ -216,18 +265,18 @@ export interface CreateMicrositeRequest {
   isAnonymous?: boolean;
   isOneTimeView?: boolean;
   musicUrl?: string;
-  scheduledAt?: string;
+  password?: string;
 }
 
 export interface UpdateMicrositeRequest {
   title?: string;
   recipientName?: string;
-  category?: Category;
   themeId?: string;
   isAnonymous?: boolean;
   isOneTimeView?: boolean;
   musicUrl?: string;
-  scheduledAt?: string;
+  /** Blank clears the password; omitted leaves it unchanged. */
+  password?: string;
 }
 
 export interface SyncUserRequest {
@@ -246,6 +295,7 @@ export interface CreateSlideRequest {
   type: SlideType;
   title?: string;
   content?: string;
+  config?: Record<string, unknown>;
   animationType?: AnimationType;
   backgroundType?: string;
 }
@@ -253,6 +303,17 @@ export interface CreateSlideRequest {
 export interface UpdateSlideRequest {
   title?: string;
   content?: string;
+  /** Merged key-by-key server-side, so a partial update keeps the rest. */
+  config?: Record<string, unknown>;
   animationType?: AnimationType;
   backgroundType?: string;
+}
+
+export interface VerifyPasswordRequest {
+  password: string;
+}
+
+export interface TrackVisitRequest {
+  currentSlideIndex?: number;
+  timeSpentSeconds?: number;
 }

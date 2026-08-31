@@ -11,7 +11,10 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    // Pinned: the backend's CORS_ALLOWED_ORIGINS whitelists this exact origin,
+    // so silently falling back to another port would break every API call.
+    port: 3001,
+    strictPort: true,
     proxy: {
       "/api": {
         target: "http://localhost:8080",

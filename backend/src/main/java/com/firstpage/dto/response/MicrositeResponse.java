@@ -10,6 +10,12 @@ import java.util.UUID;
 /**
  * Full microsite response including all slides — used for detail views
  * and the editor page.
+ *
+ * @param musicUrl      the raw URL the sender pasted, stored verbatim
+ * @param musicProvider which player the client should use: {@code YOUTUBE},
+ *                      {@code AUDIO}, or {@code NONE}. Derived from
+ *                      {@code musicUrl} on every read, never persisted.
+ * @param musicTrackId  the YouTube video ID, or the direct audio URL
  */
 public record MicrositeResponse(
         UUID id,
@@ -21,7 +27,10 @@ public record MicrositeResponse(
         UUID themeId,
         boolean isAnonymous,
         boolean isOneTimeView,
+        boolean isPasswordProtected,
         String musicUrl,
+        String musicProvider,
+        String musicTrackId,
         LocalDateTime scheduledAt,
         LocalDateTime publishedAt,
         LocalDateTime createdAt,

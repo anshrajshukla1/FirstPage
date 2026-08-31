@@ -13,6 +13,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -52,6 +54,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/api/v1/visitor/**").permitAll()
+                // The shareable link. Reached by chat and social crawlers, which
+                // never carry a token, so it has to be open or previews break.
+                .requestMatchers("/s/**").permitAll()
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html",
@@ -77,6 +82,14 @@ public class SecurityConfig {
                 }));
 
         return http.build();
+    }
+
+    /**
+     * Password encoder used to hash microsite access passwords.
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     /**
