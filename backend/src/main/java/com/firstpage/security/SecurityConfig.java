@@ -54,6 +54,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/public/**").permitAll()
                 .requestMatchers("/api/v1/visitor/**").permitAll()
+                .requestMatchers("/api/v1/health").permitAll()
                 // The shareable link. Reached by chat and social crawlers, which
                 // never carry a token, so it has to be open or previews break.
                 .requestMatchers("/s/**").permitAll()
