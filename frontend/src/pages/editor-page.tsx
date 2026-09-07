@@ -129,30 +129,58 @@ function SlidePanel({
 
 // ── Slide Editor (main content) ────────────────────────────────────────
 
-/**
- * Holds one slide's draft and hands it to that type's editor.
- *
- * <p>Every type used to get the same Title + Content pair here, so a countdown
- * had nowhere to put a date. The per-type form now comes from `SLIDE_EDITORS`
- * and this component only owns the draft and the Save button.
- */
 function SlideEditor({
   slide,
   micrositeId,
   onUpdate,
+  onPrev,
+  onNext,
+  hasPrev,
+  hasNext,
 }: {
   slide: Slide;
   micrositeId: string;
   onUpdate: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  hasPrev: boolean;
+  hasNext: boolean;
 }) {
   const entry = SLIDE_EDITORS[slide.type];
-  const [draft, setDraftState] = useState<SlideDraft>({
-    title: slide.title ?? "",
-    content: slide.content ?? "",
-    config: slide.config,
-  });
+  const draftKey = `firstpage_draft_${slide.id}`;
+
+  const getInitialDraft = (): SlideDraft => {
+    const saved = localStorage.getItem(draftKey);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // ignore invalid JSON
+      }
+    }
+    return {
+      title: slide.title ?? "",
+      content: slide.content ?? "",
+      config: slide.config,
+    };
+  };
+
+  const [draft, setDraftState] = useState<SlideDraft>(getInitialDraft);
   const [isSaving, setIsSaving] = useState(false);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(!!localStorage.getItem(draftKey));
+
+  // Sync back to slide state if the selected slide changes
+  useEffect(() => {
+    setDraftState(getInitialDraft());
+    setDirty(!!localStorage.getItem(draftKey));
+  }, [slide.id]);
+
+  // Persist draft on changes
+  useEffect(() => {
+    if (dirty) {
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+    }
+  }, [draft, dirty, draftKey]);
 
   const setDraft = (patch: Partial<SlideDraft>) => {
     setDraftState((prev) => ({ ...prev, ...patch }));
@@ -163,13 +191,14 @@ function SlideEditor({
     setIsSaving(true);
     try {
       await updateSlide(micrositeId, slide.id, {
-        // Empty is a real choice — sending undefined would leave the old text in
+        // Empty is a real choice - sending undefined would leave the old text in
         // place and make clearing a field impossible.
         title: draft.title,
         content: draft.content,
         config: draft.config,
       });
       setDirty(false);
+      localStorage.removeItem(draftKey);
       toast.success("Slide saved");
       onUpdate();
     } catch {
@@ -178,22 +207,31 @@ function SlideEditor({
     setIsSaving(false);
   };
 
+  const EditorComponent = entry.Editor;
+
   return (
-    <div className="flex flex-1 flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between border-b border-border px-6 py-3">
-        <div className="flex items-center gap-2">
-          <span className="rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            {entry.label}
-          </span>
-          <span className="text-xs text-text-muted">
-            Slide {slide.orderIndex + 1}
-          </span>
-        </div>
+    <div className="mx-auto flex h-full max-w-2xl flex-col rounded-2xl border border-border bg-background shadow-sm">
+      {/* Editor header */}
+      <div className="flex items-center justify-between border-b border-border p-4">
         <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <entry.icon className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-text-primary">{entry.label}</h3>
+            <p className="text-xs text-text-muted">{entry.description}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
           {dirty && (
-            <span className="text-xs text-text-muted">Unsaved changes</span>
+            <span className="hidden sm:inline-block text-xs text-text-muted mr-2">Unsaved changes</span>
           )}
+          <Button variant="secondary" size="sm" onClick={onPrev} disabled={!hasPrev}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onNext} disabled={!hasNext}>
+            <ArrowLeft className="h-4 w-4 rotate-180" />
+          </Button>
           <Button size="sm" onClick={handleSave} busy={isSaving}>
             {!isSaving && <Save className="h-3 w-3" />}
             Save
@@ -204,7 +242,7 @@ function SlideEditor({
       {/* Content area */}
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto flex max-w-2xl flex-col gap-6">
-          <entry.Editor
+          <EditorComponent
             slide={slide}
             micrositeId={micrositeId}
             draft={draft}
@@ -489,6 +527,14 @@ export function EditorPage() {
           </div>
         </div>
 
+        {/* Viewed Once Banner */}
+        {microsite.isOneTimeView && microsite.hasBeenViewed && (
+          <div className="flex items-center justify-center gap-2 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-700">
+            <Eye className="h-4 w-4" />
+            This microsite was set to one-time view and has already been opened by the recipient.
+          </div>
+        )}
+
         {/* Main editor area */}
         <div className="flex flex-1 overflow-hidden">
           {/* Slide panel */}
@@ -508,6 +554,16 @@ export function EditorPage() {
               slide={activeSlide}
               micrositeId={id!}
               onUpdate={invalidateSlides}
+              onPrev={() => {
+                const idx = slides.findIndex((s) => s.id === activeSlideId);
+                if (idx > 0) setActiveSlideId(slides[idx - 1].id);
+              }}
+              onNext={() => {
+                const idx = slides.findIndex((s) => s.id === activeSlideId);
+                if (idx < slides.length - 1) setActiveSlideId(slides[idx + 1].id);
+              }}
+              hasPrev={slides.findIndex((s) => s.id === activeSlideId) > 0}
+              hasNext={slides.findIndex((s) => s.id === activeSlideId) < slides.length - 1}
             />
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center text-center">

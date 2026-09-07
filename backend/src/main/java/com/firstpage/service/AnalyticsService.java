@@ -25,6 +25,7 @@ public class AnalyticsService {
     private final VisitorLogRepository visitorLogRepository;
     private final ReactionRepository reactionRepository;
     private final ReplyRepository replyRepository;
+    private final com.firstpage.mapper.ReplyMapper replyMapper;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getMicrositeAnalytics(UUID micrositeId, String firebaseUid) {
@@ -109,5 +110,12 @@ public class AnalyticsService {
             throw new UnauthorizedException("You do not own this microsite");
         }
         return microsite;
+    }
+
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<com.firstpage.dto.response.ReplyResponse> getReplies(UUID micrositeId, String firebaseUid, org.springframework.data.domain.Pageable pageable) {
+        verifyOwnership(micrositeId, firebaseUid);
+        return replyRepository.findByMicrositeIdOrderByCreatedAtDesc(micrositeId, pageable)
+                .map(replyMapper::toResponse);
     }
 }

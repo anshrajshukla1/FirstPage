@@ -30,3 +30,14 @@ export async function getMicrositeAnalytics(
 ): Promise<MicrositeAnalytics> {
   return get<MicrositeAnalytics>(`/analytics/microsites/${micrositeId}`);
 }
+
+import type { PaginatedResponse, Reply } from "@/types";
+
+export async function getReplies(
+  micrositeId: string,
+  page: number = 0,
+): Promise<PaginatedResponse<Reply>> {
+  return get<PaginatedResponse<Reply>>(
+    `/analytics/microsites/${micrositeId}/replies?page=${page}&size=50`,
+  );
+}

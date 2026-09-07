@@ -118,6 +118,7 @@ public class MicrositeService {
             VisitorSummary summary = visits.get(m.getId());
             return new MicrositeListResponse(
                     lr.id(), lr.title(), lr.slug(), lr.category(), lr.status(),
+                    lr.isOneTimeView(), lr.hasBeenViewed(), lr.isPasswordProtected(),
                     lr.previewImageUrl(), lr.slideCount(),
                     summary == null ? 0 : (int) summary.distinctVisitors(),
                     summary == null ? null : summary.lastVisitedAt(),
@@ -276,7 +277,7 @@ public class MicrositeService {
         return new MicrositeResponse(
                 response.id(), response.title(), response.slug(), response.recipientName(),
                 response.category(), response.status(), response.themeId(),
-                response.isAnonymous(), response.isOneTimeView(), response.isPasswordProtected(),
+                response.isAnonymous(), response.isOneTimeView(), response.hasBeenViewed(), response.isPasswordProtected(),
                 response.musicUrl(), response.musicProvider(), response.musicTrackId(),
                 response.scheduledAt(), response.publishedAt(),
                 response.createdAt(), response.slides(), response.slideCount(), (int) views
@@ -305,8 +306,8 @@ public class MicrositeService {
         return new MicrositeResponse(
                 full.id(), full.title(), full.slug(), full.recipientName(),
                 full.category(), full.status(), full.themeId(),
-                full.isAnonymous(), full.isOneTimeView(), true,
-                // Music is withheld along with the slides — the track itself is
+                full.isAnonymous(), full.isOneTimeView(), full.hasBeenViewed(), true,
+                // Music is withheld along with the slides - the track itself is
                 // part of the surprise.
                 null, "NONE", null,
                 full.scheduledAt(), full.publishedAt(), full.createdAt(),

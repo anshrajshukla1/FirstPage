@@ -27,6 +27,7 @@ public record MicrositeResponse(
         UUID themeId,
         boolean isAnonymous,
         boolean isOneTimeView,
+        boolean hasBeenViewed,
         boolean isPasswordProtected,
         String musicUrl,
         String musicProvider,

@@ -59,7 +59,7 @@ class JsonContractTest {
         ObjectNode json = serialize(new MicrositeResponse(
                 UUID.randomUUID(), "Title", "slug", "Recipient", Category.CRUSH,
                 MicrositeStatus.PUBLISHED, UUID.randomUUID(),
-                true, true, true,
+                true, true, true, true,
                 null, "NONE", null,
                 null, null, LocalDateTime.now(),
                 List.of(), 0, 0));
@@ -92,14 +92,14 @@ class JsonContractTest {
 
         ObjectNode viewed = serialize(new MicrositeListResponse(
                 UUID.randomUUID(), "Title", "slug", Category.CRUSH,
-                MicrositeStatus.PUBLISHED, null, 3, 2, opened, opened.minusDays(1)));
+                MicrositeStatus.PUBLISHED, false, false, false, null, 3, 2, opened, opened.minusDays(1)));
 
         assertThat(viewed.has("lastViewedAt")).as("last-opened key").isTrue();
         assertThat(viewed.get("lastViewedAt").isNull()).as("opened page").isFalse();
 
         ObjectNode unopened = serialize(new MicrositeListResponse(
                 UUID.randomUUID(), "Title", "slug", Category.CRUSH,
-                MicrositeStatus.PUBLISHED, null, 3, 0, null, opened));
+                MicrositeStatus.PUBLISHED, false, false, false, null, 3, 0, null, opened));
 
         assertThat(unopened.get("lastViewedAt").isNull()).as("never opened").isTrue();
     }

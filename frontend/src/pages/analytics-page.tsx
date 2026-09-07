@@ -169,6 +169,49 @@ function MicrositeAnalyticsView({ data }: { data: MicrositeAnalytics }) {
           <ReactionBar reactions={data.reactionsByType} />
         </div>
       </div>
+
+      <MicrositeRepliesList micrositeId={data.micrositeId} />
+    </div>
+  );
+}
+
+// ── Replies List ────────────────────────────────────────────────────────
+
+import { getReplies } from "@/services/analytics-service";
+
+function MicrositeRepliesList({ micrositeId }: { micrositeId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["analytics", "microsite", micrositeId, "replies"],
+    queryFn: () => getReplies(micrositeId),
+  });
+
+  if (isLoading) {
+    return <div className="py-10 text-center"><LoadingSpinner size="sm" /></div>;
+  }
+
+  const replies = data?.content ?? [];
+
+  return (
+    <div className="rounded-2xl border border-border bg-surface/50 p-5">
+      <h3 className="mb-4 text-sm font-semibold text-text-primary">Viewer Replies</h3>
+      
+      {replies.length === 0 ? (
+        <p className="text-sm text-text-muted">No replies yet.</p>
+      ) : (
+        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
+          {replies.map((reply) => (
+            <div key={reply.id} className="rounded-xl border border-border bg-background p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-text-primary text-sm">Anonymous Visitor</span>
+                <span className="text-xs text-text-muted">
+                  {new Date(reply.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <p className="text-sm text-text-secondary whitespace-pre-wrap">{reply.message}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

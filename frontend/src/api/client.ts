@@ -56,6 +56,7 @@ apiClient.interceptors.response.use(
     const apiError: ApiError = {
       status: error.response?.status ?? 500,
       message:
+        (error.response?.data as any)?.detail ??
         error.response?.data?.message ??
         error.message ??
         "An unexpected error occurred",

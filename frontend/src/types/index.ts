@@ -142,6 +142,7 @@ export interface Microsite {
   themeId: string | null;
   isAnonymous: boolean;
   isOneTimeView: boolean;
+  hasBeenViewed: boolean;
   isPasswordProtected: boolean;
   musicUrl: string | null;
   /**
@@ -165,6 +166,9 @@ export interface MicrositeListItem {
   slug: string;
   category: Category;
   status: MicrositeStatus;
+  isOneTimeView: boolean;
+  hasBeenViewed: boolean;
+  isPasswordProtected: boolean;
   previewImageUrl: string | null;
   slideCount: number;
   viewCount: number;

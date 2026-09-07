@@ -41,6 +41,16 @@ public class AnalyticsController {
                 analyticsService.getDashboardAnalytics(getUid(auth))));
     }
 
+    @GetMapping("/microsites/{micrositeId}/replies")
+    @Operation(summary = "Get replies for a specific microsite")
+    public ResponseEntity<ApiResponse<org.springframework.data.domain.Page<com.firstpage.dto.response.ReplyResponse>>> getReplies(
+            Authentication auth,
+            @PathVariable UUID micrositeId,
+            @org.springframework.data.web.PageableDefault(size = 50, sort = "createdAt", direction = org.springframework.data.domain.Sort.Direction.DESC) org.springframework.data.domain.Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success(
+                analyticsService.getReplies(micrositeId, getUid(auth), pageable)));
+    }
+
     private String getUid(Authentication auth) {
         return auth.getPrincipal().toString();
     }

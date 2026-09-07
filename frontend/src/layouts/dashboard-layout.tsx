@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Outlet,
   NavLink,
@@ -6,6 +7,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   LayoutDashboard,
   Plus,
@@ -45,6 +47,7 @@ function Sidebar() {
   const dispatch = useAppDispatch();
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [showSignoutModal, setShowSignoutModal] = useState(false);
 
   const isExpanded = isMobile ? sidebarOpen : true;
 
@@ -148,7 +151,7 @@ function Sidebar() {
                   </p>
                 </div>
                 <button
-                  onClick={logout}
+                  onClick={() => setShowSignoutModal(true)}
                   className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-error/10 hover:text-error"
                   title="Sign out"
                 >
@@ -159,6 +162,20 @@ function Sidebar() {
           </motion.aside>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={showSignoutModal}
+        title="Sign out?"
+        description="Are you sure you want to sign out of FirstPage?"
+        confirmLabel="Sign out"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={() => {
+          setShowSignoutModal(false);
+          logout();
+        }}
+        onCancel={() => setShowSignoutModal(false)}
+      />
     </>
   );
 }

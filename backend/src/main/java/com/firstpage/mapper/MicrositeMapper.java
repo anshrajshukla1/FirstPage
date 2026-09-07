@@ -38,6 +38,8 @@ public interface MicrositeMapper {
             expression = "java(com.firstpage.util.MusicUrlParser.trackIdOf(microsite.getMusicUrl()))")
     MicrositeResponse toResponse(Microsite microsite);
 
+    @Mapping(target = "isOneTimeView", source = "oneTimeView")
+    @Mapping(target = "isPasswordProtected", source = "passwordProtected")
     @Mapping(target = "previewImageUrl", ignore = true)
     @Mapping(target = "slideCount", expression = "java(microsite.getSlideCount())")
     @Mapping(target = "viewCount", constant = "0")

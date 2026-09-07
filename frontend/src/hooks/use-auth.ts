@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { FirebaseError } from "firebase/app";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
@@ -33,6 +34,7 @@ function describe(err: unknown): string | null {
 
 export function useAuth() {
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const { user, token, isAuthenticated, isLoading, error } = useAppSelector(
     (state) => state.auth,
   );
@@ -57,10 +59,11 @@ export function useAuth() {
     try {
       await signOut(auth);
       dispatch(logoutAction());
+      queryClient.clear(); // Clear all cached data on logout
     } catch (err) {
       console.error("Logout failed:", err);
     }
-  }, [dispatch]);
+  }, [dispatch, queryClient]);
 
   return {
     user,
