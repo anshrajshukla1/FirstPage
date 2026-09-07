@@ -1,34 +1,30 @@
-# ── Stage 1: Build ──────────────────────────────────────────────────────
-FROM maven:3.9.9-eclipse-temurin-17-alpine AS build
+﻿# Stage 1: Build the application
+FROM eclipse-temurin:17-jdk-jammy AS builder
 WORKDIR /app
 
-# Cache dependencies
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+# Copy the Maven wrapper and pom.xml
+COPY .mvn/ .mvn
+COPY mvnw pom.xml ./
 
-# Copy source and build
+# Ensure the wrapper is executable
+RUN chmod +x ./mvnw
+
+# Download dependencies
+RUN ./mvnw dependency:go-offline -B
+
+# Copy the source code and build the JAR
 COPY src ./src
-COPY .mvn ./.mvn
-RUN mvn package -DskipTests -B
+RUN ./mvnw clean package -DskipTests
 
-# ── Stage 2: Runtime ────────────────────────────────────────────────────
-FROM eclipse-temurin:17-jre-alpine
+# Stage 2: Run the application
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Copy the built jar from the builder stage
+COPY --from=builder /app/target/*.jar app.jar
 
-COPY --from=build /app/target/*.jar app.jar
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://localhost:8080/actuator/health || exit 1
-
-USER appuser
-
+# Expose the standard Spring Boot port
 EXPOSE 8080
 
-ENTRYPOINT ["java", \
-  "-XX:+UseContainerSupport", \
-  "-XX:MaxRAMPercentage=75.0", \
-  "-Djava.security.egd=file:/dev/./urandom", \
-  "-jar", "app.jar"]
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
