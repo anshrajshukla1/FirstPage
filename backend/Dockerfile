@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y unzip
 COPY .mvn/ .mvn
 COPY mvnw pom.xml ./
 
-# Ensure the wrapper is executable
-RUN chmod +x ./mvnw
+# Ensure the wrapper is executable and fix Windows CRLF line endings
+RUN chmod +x ./mvnw && sed -i 's/\r$//' mvnw
 
 # Download dependencies
 RUN ./mvnw dependency:go-offline -B
