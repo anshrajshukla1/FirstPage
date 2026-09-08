@@ -16,7 +16,6 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { Logo } from "@/components/common/logo";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 import { useAppSelector } from "@/store/store";
 import { ROUTES } from "@/constants/routes";
 import { cn } from "@/lib/utils";
@@ -99,7 +98,7 @@ function Navbar() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 md:px-8">
         <Logo size="sm" />
         <div className="flex items-center gap-3">
-          <ThemeToggle />
+          
           <Link
             to={isAuthenticated ? ROUTES.DASHBOARD : ROUTES.LOGIN}
             className="rounded-xl bg-primary px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:bg-primary-hover hover:shadow-xl hover:shadow-primary/30"

@@ -20,7 +20,6 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Logo } from "@/components/common/logo";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 import { NotificationBell } from "@/components/common/notification-bell";
 import { ProtectedRoute } from "@/components/common/protected-route";
 import { useAppSelector, useAppDispatch } from "@/store/store";
@@ -234,7 +233,7 @@ function TopBar() {
 
       <div className="ml-auto flex items-center gap-2">
         <NotificationBell />
-        <ThemeToggle />
+        
       </div>
     </header>
   );

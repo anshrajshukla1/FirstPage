@@ -1,7 +1,6 @@
 import { Outlet, Navigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Logo } from "@/components/common/logo";
-import { ThemeToggle } from "@/components/common/theme-toggle";
 import { useAppSelector } from "@/store/store";
 import { ROUTES } from "@/constants/routes";
 
@@ -68,7 +67,7 @@ export function AuthLayout() {
 
       {/* Theme toggle */}
       <div className="absolute right-4 top-4">
-        <ThemeToggle />
+        
       </div>
 
       {/* Content */}
