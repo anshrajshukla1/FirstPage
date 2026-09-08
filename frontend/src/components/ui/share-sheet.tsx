@@ -6,25 +6,19 @@ import { Modal } from "./modal";
 import { Button } from "./button";
 
 /**
- * The origin that serves the shareable link.
- *
- * <p>`/s/:slug` is a backend route — it returns the preview tags a chat app
- * reads before redirecting a person to the viewer — and the frontend does not
- * proxy it: Vite forwards only `/api`, `nginx.conf` forwards nothing, and the
- * two apps deploy as separate origins. So the link is built from the configured
- * API base URL with the `/api/v1` suffix stripped, which is the only value the
- * client already knows to be the backend.
+ * Returns the base URL for shareable microsite links.
+ * Uses VITE_APP_URL (the frontend URL) so shared links always point to
+ * the Vercel deployment, not the Render backend.
  */
-function shareOriginOf(apiBaseUrl: string): string {
-  const trimmed = apiBaseUrl.replace(/\/+$/, "").replace(/\/api\/v\d+$/, "");
-  // A relative base ("/api/v1" in dev without an override) leaves nothing to
-  // build on, so fall back to the page's own origin.
-  return trimmed.startsWith("http") ? trimmed : window.location.origin;
+function shareOrigin(): string {
+  const appUrl = import.meta.env.VITE_APP_URL;
+  if (appUrl) return appUrl.replace(/\/+$/, "");
+  // Fallback: current page origin (works in local dev automatically)
+  return window.location.origin;
 }
 
 export function buildShareUrl(slug: string): string {
-  const base = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
-  return `${shareOriginOf(base)}/s/${slug}`;
+  return `${shareOrigin()}/s/${slug}`;
 }
 
 interface ShareSheetProps {
