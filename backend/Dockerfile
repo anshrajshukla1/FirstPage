@@ -1,6 +1,9 @@
-﻿# Stage 1: Build the application
+# Stage 1: Build the application
 FROM eclipse-temurin:17-jdk-jammy AS builder
 WORKDIR /app
+
+# Install unzip which is required by the Maven wrapper
+RUN apt-get update && apt-get install -y unzip
 
 # Copy the Maven wrapper and pom.xml
 COPY .mvn/ .mvn
