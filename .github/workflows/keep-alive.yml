@@ -1,0 +1,28 @@
+﻿name: Backend Keep-Alive & Health Check
+
+on:
+  schedule:
+    # Runs every 14 minutes to prevent Render free-tier sleep
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  ping-backend:
+    name: Ping Production Health Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend Health Endpoint
+        run: |
+          echo "Pinging backend at https://firstpage-backend-imd6.onrender.com/api/v1/health..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://firstpage-backend-imd6.onrender.com/api/v1/health)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" -eq 200 ]; then
+            echo "Backend is healthy and awake!"
+          else
+            echo "Backend responded with status $STATUS. Retrying in 10s..."
+            sleep 10
+            curl -f https://firstpage-backend-imd6.onrender.com/api/v1/health
+          fi

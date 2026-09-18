@@ -11,15 +11,17 @@ import java.time.LocalDateTime;
  * Health check endpoint for external monitoring services.
  */
 @RestController
-@RequestMapping("/api/v1/health")
 public class HealthController {
 
-    @GetMapping
+    private final LocalDateTime startedAt = LocalDateTime.now();
+
+    @GetMapping({"/api/v1/health", "/health"})
     public ResponseEntity<Map<String, Object>> healthCheck() {
         return ResponseEntity.ok(Map.of(
             "status", "UP",
             "service", "FirstPage API",
-            "timestamp", LocalDateTime.now()
+            "timestamp", LocalDateTime.now(),
+            "startedAt", startedAt
         ));
     }
 }
