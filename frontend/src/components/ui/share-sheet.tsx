@@ -18,7 +18,7 @@ function shareOrigin(): string {
 }
 
 export function buildShareUrl(slug: string): string {
-  return `${shareOrigin()}/s/${slug}`;
+  return `${shareOrigin()}/p/${slug}`;
 }
 
 interface ShareSheetProps {

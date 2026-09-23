@@ -85,6 +85,10 @@ export const router = createBrowserRouter([
         path: "/p/:slug",
         element: <PublicViewerPage />,
       },
+      {
+        path: "/s/:slug",
+        element: <PublicViewerPage />,
+      },
 
       // 404
       {
